@@ -11,7 +11,6 @@
 </head>
 <body>
 
-  <div id="page-transition"></div>
   <div id="intro-block"></div>
   <div id="scanlines"></div>
   <div class="scroll-progress" id="scrollProgress"></div>
@@ -175,16 +174,5 @@
   <script src="js/uploader.js"></script>
   <script src="js/export.js"></script>
   <script src="js/main.js"></script>
-<script>
-(function(){
-  var ov = document.getElementById('page-transition');
-  ov.classList.add('in');
-  setTimeout(function(){
-    ov.classList.remove('in');
-    ov.classList.add('out');
-    setTimeout(function(){ ov.classList.remove('out'); }, 600);
-  }, 80);
-})();
-</script>
 </body>
 </html>

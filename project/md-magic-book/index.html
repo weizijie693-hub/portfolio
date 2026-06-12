@@ -14,7 +14,6 @@
 </head>
 <body>
 
-  <div id="page-transition"></div>
   <div id="intro-block"></div>
   <div id="scanlines"></div>
   <div class="custom-cursor" id="cursor"></div>
@@ -214,16 +213,5 @@
     }
   }
   </script>
-<script>
-(function(){
-  var ov = document.getElementById('page-transition');
-  ov.classList.add('in');
-  setTimeout(function(){
-    ov.classList.remove('in');
-    ov.classList.add('out');
-    setTimeout(function(){ ov.classList.remove('out'); }, 600);
-  }, 80);
-})();
-</script>
 </body>
 </html>
