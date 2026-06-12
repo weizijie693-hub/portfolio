@@ -48,38 +48,39 @@ canvas#overlayCanvas{display:block;position:fixed;top:0;left:0;pointer-events:no
 @keyframes introIn{from{transform:scale(0)}to{transform:scale(1)}}
 @keyframes introOut{from{transform:translateY(0);opacity:1}to{transform:translateY(105%);opacity:1}}
 
-#toolbar{
-  position:fixed;top:28px;left:50%;transform:translateX(-50%);
-  z-index:100;display:flex;align-items:center;
-  background:rgba(17,17,17,0.95);border:1px solid var(--border);
-  border-radius:var(--radius);overflow:hidden;
-  backdrop-filter:blur(20px);
+/* ─── Nav ─── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:28px 40px;display:flex;justify-content:space-between;align-items:center;
+  background:rgba(10,10,10,0.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
 }
-#toolbar .brush-btn{
-  width:44px;height:44px;border:none;cursor:pointer;
+nav .logo{
+  font-size:13px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--text);
+}
+nav .logo span{color:var(--accent);}
+nav .links{display:flex;gap:2px;align-items:center;}
+nav .links .brush-btn{
+  width:38px;height:38px;border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   background:transparent;color:var(--text-muted);position:relative;
-  font-size:16px;transition:all 0.3s;
+  font-size:15px;transition:all 0.3s;border-radius:8px;
 }
-#toolbar .brush-btn:hover{color:var(--text);}
-#toolbar .brush-btn.active{color:#ff5500;}
-#toolbar .brush-btn.active::after{
-  content:'';position:absolute;bottom:0;left:4px;right:4px;
-  height:3px;background:var(--accent);border-radius:2px;
-}
-#toolbar .divider{width:1px;height:24px;background:var(--border);margin:0 4px;}
-#toolbar .tool-btn{
+nav .links .brush-btn:hover{color:var(--accent);background:rgba(255,85,0,0.1);}
+nav .links .brush-btn.active{color:var(--accent);background:rgba(255,85,0,0.15);}
+nav .links .divider{width:1px;height:22px;background:var(--border);margin:0 6px;}
+nav .links .tool-btn{
   background:none;border:none;color:var(--text-muted);
-  padding:0 18px;height:44px;cursor:pointer;
+  padding:0 14px;height:38px;cursor:pointer;
   font-family:var(--font);font-size:10px;font-weight:500;
   letter-spacing:0.1em;text-transform:uppercase;
-  border-left:1px solid var(--border);transition:all 0.3s;
+  transition:all 0.3s;border-radius:8px;
 }
-#toolbar .tool-btn:hover{color:var(--accent);}
-#toolbar .tool-btn.accent{background:var(--accent);color:#000;font-weight:600;}
-#toolbar .tool-btn.accent:hover{background:#ff6a1a;color:#000;}
-#toolbar .tool-btn.danger:hover{color:#e04040;}
-#toolbar .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.15);}
+nav .links .tool-btn:hover{color:var(--accent);background:rgba(255,85,0,0.1);}
+nav .links .tool-btn.accent{background:var(--accent);color:#000;font-weight:600;}
+nav .links .tool-btn.accent:hover{background:#ff6a1a;color:#000;}
+nav .links .tool-btn.danger:hover{color:#e04040;}
+nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.15);}
 .lang-toggle{position:fixed;top:28px;right:28px;z-index:101;background:rgba(17,17,17,0.95);border:1px solid var(--border);color:var(--text-muted);width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-family:var(--font);font-size:11px;font-weight:600;border-radius:50%;cursor:pointer;backdrop-filter:blur(20px);transition:all 0.3s;}
 .lang-toggle:hover{color:var(--accent);border-color:var(--accent);}
 
@@ -151,8 +152,9 @@ canvas#overlayCanvas{display:block;position:fixed;top:0;left:0;pointer-events:no
 
 @media(max-width:768px){
   #sidePanel{width:160px;padding:16px 12px;}
-  #toolbar .brush-btn{width:36px;height:36px;}
-  #toolbar .tool-btn{padding:0 12px;font-size:9px;}
+  nav .links .brush-btn{width:36px;height:36px;}
+  nav .links .tool-btn{padding:0 10px;font-size:9px;}
+  nav{padding:20px 20px;}
 }
 </style>
 </head>
@@ -165,19 +167,22 @@ canvas#overlayCanvas{display:block;position:fixed;top:0;left:0;pointer-events:no
 <div id="intro-block"></div>
 <button class="lang-toggle" id="langToggle" title="EN | 中">中</button>
 
-<div id="toolbar">
-  <button class="brush-btn active" data-brush="neon" title="Neon Tube">◯</button>
-  <button class="brush-btn" data-brush="fire" title="Fire Spark">▲</button>
-  <button class="brush-btn" data-brush="meteor" title="Meteor Trail">◆</button>
-  <button class="brush-btn" data-brush="rainbow" title="Rainbow Ribbon">〰</button>
-  <button class="brush-btn" data-brush="electric" title="Electric Arc">⚡</button>
-  <button class="brush-btn" data-brush="spray" title="Spray Can">💨</button>
-  <span class="divider"></span>
-  <button class="tool-btn" id="symmetryBtn">Mirror</button>
-  <button class="tool-btn" id="undoBtn">Undo</button>
-  <button class="tool-btn danger" id="clearBtn">Clear</button>
-  <button class="tool-btn accent" id="exportPng">Export</button>
-</div>
+<nav>
+  <div class="logo">Light<span>Graffiti</span></div>
+  <div class="links">
+    <button class="brush-btn active" data-brush="neon" title="Neon Tube">◯</button>
+    <button class="brush-btn" data-brush="fire" title="Fire Spark">▲</button>
+    <button class="brush-btn" data-brush="meteor" title="Meteor Trail">◆</button>
+    <button class="brush-btn" data-brush="rainbow" title="Rainbow Ribbon">〰</button>
+    <button class="brush-btn" data-brush="electric" title="Electric Arc">⚡</button>
+    <button class="brush-btn" data-brush="spray" title="Spray Can">💨</button>
+    <span class="divider"></span>
+    <button class="tool-btn" id="symmetryBtn">Mirror</button>
+    <button class="tool-btn" id="undoBtn">Undo</button>
+    <button class="tool-btn danger" id="clearBtn">Clear</button>
+    <button class="tool-btn accent" id="exportPng">Export</button>
+  </div>
+</nav>
 
 <div id="sidePanel">
   <div class="toggle-panel" id="toggleSidebar">+</div>
@@ -456,7 +461,14 @@ canvas#overlayCanvas{display:block;position:fixed;top:0;left:0;pointer-events:no
     octx.fillStyle='rgba(0,0,0,'+fadeAlpha+')';
     octx.fillRect(0,0,W,H);
     renderTrails();
-    if(drawing&&trails.length>2000)bakeTrails();
+    // Cap trail count to prevent lag
+    if(trails.length>800){
+      var remove=trails.length-800;
+      for(var ri=0;ri<remove;ri++){ ctx.drawImage(overlayCanvas,0,0); }
+      octx.clearRect(0,0,W,H);
+      trails.splice(0,remove);
+    }
+    if(drawing&&trails.length>600)bakeTrails();
     else if(!drawing)bakeTrails();
     requestAnimationFrame(animate);
   }

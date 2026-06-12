@@ -21,26 +21,18 @@
   <!-- ═══ Nav ═══ -->
   <nav class="nav">
     <div class="nav-inner">
-      <div class="nav-brand">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <rect x="2" y="3" width="16" height="14" rx="1" stroke="currentColor" stroke-width="1"/>
-          <line x1="5" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1"/>
-          <line x1="5" y1="10" x2="12" y2="10" stroke="currentColor" stroke-width="1"/>
-          <line x1="5" y1="13" x2="10" y2="13" stroke="currentColor" stroke-width="1"/>
-        </svg>
-        <span data-i18n="brandName">Magic Book</span>
-      </div>
+      <div class="nav-brand"><span data-i18n="brandName1">MAGIC</span> <span data-i18n="brandName2">BOOK</span></div>
       <div class="nav-links-left">
         <button class="nav-link active" data-view="split" data-i18n="viewSplit">Split</button>
         <button class="nav-link" data-view="preview" data-i18n="viewPreview">Preview</button>
         <button class="nav-link" data-view="edit" data-i18n="viewEdit">Edit</button>
       </div>
       <div class="nav-links">
-        <button class="nav-link" id="btnTemplate" data-i18n="btnTemplate">📄 Template</button>
-        <button class="nav-link" id="btnExportMD" data-i18n="btnExportMD">⬇ Download .md</button>
-        <button class="nav-link" id="btnExportHTML" data-i18n="btnExportHTML">⎘ Export HTML</button>
-        <button class="nav-link" id="btnPresent" data-i18n="btnPresent">🎬 Present</button>
-        <button class="nav-link lang-toggle" id="btnLang" title="Switch Language">🌐</button>
+        <button class="nav-link" id="btnTemplate" data-i18n="btnTemplate">Template</button>
+        <button class="nav-link" id="btnExportMD" data-i18n="btnExportMD">Download .md</button>
+        <button class="nav-link" id="btnExportHTML" data-i18n="btnExportHTML">Export HTML</button>
+        <button class="nav-link" id="btnPresent" data-i18n="btnPresent">Present</button>
+        <button class="lang-toggle" id="btnLang" title="Switch Language">中</button>
         <input type="file" id="fileInput" accept=".md" hidden>
       </div>
     </div>
@@ -48,6 +40,12 @@
 
   <!-- ═══ Editor ─── -->
   <main class="main-view entered" id="mainView">
+    <!-- Hero -->
+    <div class="md-hero">
+      <p class="md-eyebrow" data-i18n="heroEyebrow">Live Markdown Editor</p>
+      <h1 data-i18n="heroTitle">Magic<br><em>Book</em></h1>
+      <p class="md-sub" data-i18n="heroSub">Write, preview, and present Markdown with real-time rendering and cinematic slide decks</p>
+    </div>
     <div class="main">
       <div class="editor" id="editor">
         <textarea class="editor-input" id="editorInput" spellcheck="false" data-i18n-placeholder="editorPlaceholder" placeholder="Start writing Markdown…"></textarea>
@@ -114,15 +112,18 @@
   var DICT = {
     en: {
       pageTitle: 'Markdown Magic Book',
-      brandName: 'Magic Book',
+      brandName1: 'MAGIC', brandName2: 'BOOK',
+      heroEyebrow: 'Live Markdown Editor',
+      heroTitle: 'Magic<br><em>Book</em>',
+      heroSub: 'Write, preview, and present Markdown with real-time rendering and cinematic slide decks',
       viewSplit: 'Split',
       viewPreview: 'Preview',
       viewEdit: 'Edit',
-      btnTemplate: '📄 Template',
-      btnExportMD: '⬇ Download .md',
-      btnExportHTML: '⎘ Export HTML',
-      btnPresent: '🎬 Present',
-      btnLang: '🌐',
+      btnTemplate: 'Template',
+      btnExportMD: 'Download .md',
+      btnExportHTML: 'Export HTML',
+      btnPresent: 'Present',
+      btnLang: '中',
       editorPlaceholder: 'Start writing Markdown…',
       statusLines: '{n} lines',
       statusWords: '{n} words',
@@ -135,15 +136,18 @@
     },
     zh: {
       pageTitle: 'Markdown 魔法书',
-      brandName: '魔法书',
+      brandName1: 'MAGIC', brandName2: 'BOOK',
+      heroEyebrow: '实时 Markdown 编辑器',
+      heroTitle: 'Magic<br><em>Book</em>',
+      heroSub: '实时渲染、演示模式、自动保存——一站式 Markdown 写作与展示工具',
       viewSplit: '分栏',
       viewPreview: '预览',
       viewEdit: '编辑',
-      btnTemplate: '📄 模板',
-      btnExportMD: '⬇ 下载 .md',
-      btnExportHTML: '⎘ 导出 HTML',
-      btnPresent: '🎬 演示',
-      btnLang: '🌐',
+      btnTemplate: '模板',
+      btnExportMD: '下载 .md',
+      btnExportHTML: '导出 HTML',
+      btnPresent: '演示',
+      btnLang: 'EN',
       editorPlaceholder: '开始写 Markdown…',
       statusLines: '{n} 行',
       statusWords: '{n} 字',

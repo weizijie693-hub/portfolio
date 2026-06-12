@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Glitch Studio — Datamosh Engine</title>
+<script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -615,6 +616,8 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
     if(!originalImage){showToast(t('toast.noimage'));return;}
     showToast(t('toast.exporting'));
     var origEff={};for(var k in effects)origEff[k]=effects[k];
+    var gif=new GIF({workers:0,quality:10,width:canvas.width,height:canvas.height,
+      workerScript:'https://unpkg.com/gif.js@0.2.0/dist/gif.worker.js'});
     for(var i=0;i<10;i++){
       var srcData=new ImageData(new Uint8ClampedArray(originalImage.data),originalImage.width,originalImage.height);
       var frameEff={};for(var k in origEff)frameEff[k]=origEff[k];
@@ -624,10 +627,14 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
       var gifCanvas=document.createElement('canvas');
       gifCanvas.width=canvas.width;gifCanvas.height=canvas.height;
       gifCanvas.getContext('2d').putImageData(applyEffects(srcData,frameEff),0,0);
-      setTimeout(function(idx){
-        var a=document.createElement('a');a.download='glitch-frame-'+(idx+1)+'.png';a.href=gifCanvas.toDataURL('image/png');a.click();
-      },i*200,i);
+      gif.addFrame(gifCanvas,{delay:150});
     }
+    gif.on('finished',function(blob){
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='glitch.gif';a.click();
+      showToast(t('toast.gifDone'));
+    });
+    gif.on('error',function(){showToast(t('toast.gifFail'));});
+    gif.render();
   });
 
   // BG Particles
@@ -674,7 +681,8 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
       'toast.vhs':'[ VHS Preset ]','toast.decay':'[ DECAY Preset ]','toast.cyber':'[ CYBER Preset ]','toast.crt':'[ CRT Preset ]',
       'toast.compare':'[ Compare Mode ]','toast.single':'[ Single View ]',
       'toast.randomized':'[ Randomized ]','toast.reset':'[ All Reset ]',
-      'toast.exported':'[ PNG Exported ]','toast.noimage':'[ No Image ]','toast.exporting':'[ Exporting 10 Frames... ]',
+      'toast.exported':'[ PNG Exported ]','toast.noimage':'[ No Image ]','toast.exporting':'[ Creating GIF... ]',
+      'toast.gifDone':'[ GIF Exported ]','toast.gifFail':'[ GIF failed — try again ]',
       'effect.rgb':'RGB Shift','effect.tear':'H-Tear','effect.pixelSort':'Pixel Sort','effect.scanlines':'Scanlines','effect.blockShift':'Block Shift','effect.quantize':'Quantize'
     },
     zh: {
@@ -696,7 +704,8 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
       'toast.vhs':'[ VHS 预设 ]','toast.decay':'[ 衰减预设 ]','toast.cyber':'[ 赛博预设 ]','toast.crt':'[ CRT 预设 ]',
       'toast.compare':'[ 对比模式 ]','toast.single':'[ 单图模式 ]',
       'toast.randomized':'[ 已随机化 ]','toast.reset':'[ 已重置 ]',
-      'toast.exported':'[ 已导出 PNG ]','toast.noimage':'[ 未加载图片 ]','toast.exporting':'[ 正在导出 10 帧... ]',
+      'toast.exported':'[ 已导出 PNG ]','toast.noimage':'[ 未加载图片 ]','toast.exporting':'[ 正在生成 GIF... ]',
+      'toast.gifDone':'[ 已导出 GIF ]','toast.gifFail':'[ GIF 失败 — 请重试 ]',
       'effect.rgb':'RGB 偏移','effect.tear':'水平撕裂','effect.pixelSort':'像素排序','effect.scanlines':'扫描线','effect.blockShift':'块位移','effect.quantize':'色彩量化'
     }
   };

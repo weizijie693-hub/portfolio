@@ -19,17 +19,7 @@
   <!-- ═══ Navigation ═══ -->
   <nav class="nav">
     <div class="nav-inner">
-      <div class="nav-brand">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1"/>
-          <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1"/>
-          <line x1="10" y1="1" x2="10" y2="6" stroke="currentColor" stroke-width="1"/>
-          <line x1="10" y1="14" x2="10" y2="19" stroke="currentColor" stroke-width="1"/>
-          <line x1="1" y1="10" x2="6" y2="10" stroke="currentColor" stroke-width="1"/>
-          <line x1="14" y1="10" x2="19" y2="10" stroke="currentColor" stroke-width="1"/>
-        </svg>
-        <span data-i18n="brandName">Color Detective</span>
-      </div>
+      <div class="nav-brand"><span data-i18n="brandName1">COLOR</span> <span data-i18n="brandName2">DETECTIVE</span></div>
       <div class="nav-links">
         <span class="nav-link active" data-i18n="navExtract">Extract</span>
         <span class="nav-link" id="btnReUpload" data-i18n="navReUpload">Re-upload</span>
@@ -44,6 +34,7 @@
     <!-- ─── Hero / Upload ─── -->
     <section class="hero" id="uploadZone">
       <div class="hero-text">
+        <p class="hero-eyebrow" data-i18n="heroEyebrow">Real-Time Color Extraction Engine</p>
         <h1 class="hero-title">
           <span data-i18n="heroTitleLine1">Extract</span><br>
           <span class="hero-accent" data-i18n="heroTitleAccent">Colors</span>
@@ -82,13 +73,23 @@
         <div class="sec-head">
           <span class="sec-num">01</span>
           <h2 class="sec-label" data-i18n="secDominant">Dominant Colors</h2>
+          <button class="info-btn" data-info="dominant" title="What is this?">?</button>
           <span class="sec-line"></span>
           <span class="sec-tag">DOMINANT</span>
         </div>
         <div class="dominant" id="dominantStrip"></div>
+        <!-- Tint/Shade strip — appears on color click -->
+        <div class="tint-strip hidden" id="tintStrip">
+          <div class="tint-head">
+            <span class="tint-label" data-i18n="tintLabel">Tints & Shades</span>
+            <span class="tint-hex" id="tintHexRef">#FF5500</span>
+          </div>
+          <div class="tint-row" id="tintRow"></div>
+        </div>
         <div class="sec-actions" id="dominantActions">
           <button class="act" data-copy="hex" data-i18n="btnCopyHex">⎘ Copy All Hex</button>
           <button class="act" data-copy="css" data-i18n="btnExportCSS">◈ Export CSS Variables</button>
+          <button class="act" data-copy="json" data-i18n="btnExportJSON">≣ Export JSON</button>
           <button class="act" id="btnExportPalette" data-i18n="btnExportPalette">⬇ Export Palette</button>
         </div>
       </section>
@@ -98,10 +99,69 @@
         <div class="sec-head">
           <span class="sec-num">02</span>
           <h2 class="sec-label" data-i18n="secSchemes">Color Schemes</h2>
+          <button class="info-btn" data-info="schemes" title="What is this?">?</button>
           <span class="sec-line"></span>
           <span class="sec-tag">HARMONIES</span>
         </div>
         <div class="schemes" id="schemes"></div>
+      </section>
+
+      <!-- 03 Color Temperature -->
+      <section class="sec" id="tempSection">
+        <div class="sec-head">
+          <span class="sec-num">03</span>
+          <h2 class="sec-label" data-i18n="secTemp">Color Temperature</h2>
+          <button class="info-btn" data-info="temperature" title="What is this?">?</button>
+          <span class="sec-line"></span>
+          <span class="sec-tag">WARM / COOL</span>
+        </div>
+        <div class="temp-grid" id="tempGrid"></div>
+      </section>
+
+      <!-- 04 Average Color -->
+      <section class="sec" id="avgSection">
+        <div class="sec-head">
+          <span class="sec-num">04</span>
+          <h2 class="sec-label" data-i18n="secAvg">Average Color</h2>
+          <button class="info-btn" data-info="average" title="What is this?">?</button>
+          <span class="sec-line"></span>
+          <span class="sec-tag">BLEND</span>
+        </div>
+        <div class="avg-display" id="avgDisplay">
+          <div class="avg-swatch" id="avgSwatch"></div>
+          <div class="avg-info">
+            <span class="avg-hex" id="avgHex">#000000</span>
+            <span class="avg-desc" data-i18n="avgDesc">Weighted average of all sampled pixels</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 Brightness Distribution -->
+      <section class="sec" id="briSection">
+        <div class="sec-head">
+          <span class="sec-num">05</span>
+          <h2 class="sec-label" data-i18n="secBri">Brightness Balance</h2>
+          <button class="info-btn" data-info="brightness" title="What is this?">?</button>
+          <span class="sec-line"></span>
+          <span class="sec-tag">LUMINANCE</span>
+        </div>
+        <div class="bri-chart" id="briChart">
+          <div class="bri-bar-wrap"><div class="bri-bar bri-dark"><div class="bri-fill" id="briDarkFill"></div></div><span class="bri-label" data-i18n="briDark">Dark</span></div>
+          <div class="bri-bar-wrap"><div class="bri-bar bri-mid"><div class="bri-fill" id="briMidFill"></div></div><span class="bri-label" data-i18n="briMid">Mid</span></div>
+          <div class="bri-bar-wrap"><div class="bri-bar bri-light"><div class="bri-fill" id="briLightFill"></div></div><span class="bri-label" data-i18n="briLight">Light</span></div>
+        </div>
+      </section>
+
+      <!-- 06 Color Details -->
+      <section class="sec" id="detailSection">
+        <div class="sec-head">
+          <span class="sec-num">06</span>
+          <h2 class="sec-label" data-i18n="secDetail">Color Details</h2>
+          <button class="info-btn" data-info="details" title="What is this?">?</button>
+          <span class="sec-line"></span>
+          <span class="sec-tag">PROPERTIES</span>
+        </div>
+        <div class="detail-table" id="detailTable"></div>
       </section>
 
     </div>
