@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light Graffiti — Luminous Canvas</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg:#0a0a0a;--surface:#111;--text:#e8e8e8;--text-muted:#888;
+  --accent:#ff5500;--accent-glow:rgba(255,85,0,0.3);--border:#222;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  cursor:none;overflow:hidden;height:100vh;
+  -webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;
+}
+
+canvas#mainCanvas{display:block;position:fixed;top:0;left:0;}
+canvas#overlayCanvas{display:block;position:fixed;top:0;left:0;pointer-events:none;}
+
+#cursor{
+  position:fixed;width:12px;height:12px;border:1.5px solid var(--accent);
+  border-radius:50%;pointer-events:none;z-index:9999;
+  transition:width 0.3s,height 0.3s;transform:translate(-50%,-50%);mix-blend-mode:difference;
+}
+#cursor.hover{width:32px;height:32px;background:rgba(255,85,0,0.15);border-color:#fff;}
+#cursor.click{width:8px;height:8px;background:var(--accent);border-color:var(--accent);}
+#cursor.drawing{width:20px;height:20px;background:rgba(255,85,0,0.3);border-color:var(--accent);}
+
+#noise{
+  position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:0.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+
+/* ── Intro Block ── */
+#intro-block{
+  position:fixed;inset:0;z-index:10001;background:var(--accent);
+  animation:introIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards,
+           introOut 0.6s 0.8s cubic-bezier(0.16,1,0.3,1) forwards;
+  pointer-events:none;
+}
+@keyframes introIn{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes introOut{from{transform:translateY(0);opacity:1}to{transform:translateY(105%);opacity:1}}
+
+#toolbar{
+  position:fixed;top:28px;left:50%;transform:translateX(-50%);
+  z-index:100;display:flex;align-items:center;
+  background:rgba(17,17,17,0.95);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  backdrop-filter:blur(20px);
+}
+#toolbar .brush-btn{
+  width:44px;height:44px;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;color:var(--text-muted);position:relative;
+  font-size:16px;transition:all 0.3s;
+}
+#toolbar .brush-btn:hover{color:var(--text);}
+#toolbar .brush-btn.active{color:#ff5500;}
+#toolbar .brush-btn.active::after{
+  content:'';position:absolute;bottom:0;left:4px;right:4px;
+  height:3px;background:var(--accent);border-radius:2px;
+}
+#toolbar .divider{width:1px;height:24px;background:var(--border);margin:0 4px;}
+#toolbar .tool-btn{
+  background:none;border:none;color:var(--text-muted);
+  padding:0 18px;height:44px;cursor:pointer;
+  font-family:var(--font);font-size:10px;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  border-left:1px solid var(--border);transition:all 0.3s;
+}
+#toolbar .tool-btn:hover{color:var(--accent);}
+#toolbar .tool-btn.accent{background:var(--accent);color:#000;font-weight:600;}
+#toolbar .tool-btn.accent:hover{background:#ff6a1a;color:#000;}
+#toolbar .tool-btn.danger:hover{color:#e04040;}
+#toolbar .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.15);}
+.lang-toggle{position:fixed;top:28px;right:28px;z-index:101;background:rgba(17,17,17,0.95);border:1px solid var(--border);color:var(--text-muted);width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-family:var(--font);font-size:11px;font-weight:600;border-radius:50%;cursor:pointer;backdrop-filter:blur(20px);transition:all 0.3s;}
+.lang-toggle:hover{color:var(--accent);border-color:var(--accent);}
+
+#sidePanel{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);
+  background:rgba(17,17,17,0.95);border:1px solid var(--border);
+  border-right:none;padding:24px 18px;z-index:100;width:200px;
+  display:flex;flex-direction:column;gap:12px;
+  backdrop-filter:blur(20px);
+  border-radius:var(--radius) 0 0 var(--radius);
+  transition:transform 0.5s cubic-bezier(0.25,0.1,0.25,1);
+}
+#sidePanel.collapsed{transform:translateY(-50%) translateX(168px);}
+#sidePanel .toggle-panel{
+  position:absolute;left:-36px;top:50%;transform:translateY(-50%);
+  width:36px;height:36px;background:rgba(17,17,17,0.95);
+  border:1px solid var(--border);border-right:none;
+  color:var(--text);font-size:14px;display:flex;
+  align-items:center;justify-content:center;
+  cursor:pointer;transition:color 0.3s;
+  border-radius:8px 0 0 8px;
+}
+#sidePanel .toggle-panel:hover{color:var(--accent);}
+#sidePanel label{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:9px;font-weight:600;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text-muted);
+}
+#sidePanel label span{color:var(--accent);}
+#sidePanel input[type="range"]{
+  -webkit-appearance:none;width:100%;height:2px;background:var(--border);outline:none;border-radius:2px;
+}
+#sidePanel input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;transition:transform 0.2s;
+}
+#sidePanel input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.4);}
+#sidePanel input[type="color"]{
+  -webkit-appearance:none;width:28px;height:28px;border:1px solid var(--border);border-radius:6px;
+  cursor:pointer;padding:0;background:none;
+}
+#sidePanel input[type="color"]::-webkit-color-swatch-wrapper{padding:0;}
+#sidePanel input[type="color"]::-webkit-color-swatch{border:none;border-radius:4px;}
+
+#hud{
+  position:fixed;left:28px;bottom:28px;z-index:100;
+  font-size:10px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text-muted);
+  pointer-events:none;
+}
+#hud span{color:var(--accent);}
+
+#toast{
+  position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:1000;padding:12px 24px;
+  background:var(--surface);border:1px solid var(--accent);
+  font-size:12px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text);
+  opacity:0;transition:all 0.4s ease;border-radius:8px;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#hint{
+  position:fixed;left:50%;bottom:40px;transform:translateX(-50%);
+  z-index:100;color:rgba(255,255,255,0.15);
+  font-size:12px;letter-spacing:0.08em;
+  pointer-events:none;transition:opacity 1.5s;
+}
+
+@media(max-width:768px){
+  #sidePanel{width:160px;padding:16px 12px;}
+  #toolbar .brush-btn{width:36px;height:36px;}
+  #toolbar .tool-btn{padding:0 12px;font-size:9px;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="mainCanvas"></canvas>
+<canvas id="overlayCanvas"></canvas>
+<div id="noise"></div>
+<div id="cursor"></div>
+
+<div id="intro-block"></div>
+<button class="lang-toggle" id="langToggle" title="EN | 中">中</button>
+
+<div id="toolbar">
+  <button class="brush-btn active" data-brush="neon" title="Neon Tube">◯</button>
+  <button class="brush-btn" data-brush="fire" title="Fire Spark">▲</button>
+  <button class="brush-btn" data-brush="meteor" title="Meteor Trail">◆</button>
+  <button class="brush-btn" data-brush="rainbow" title="Rainbow Ribbon">〰</button>
+  <button class="brush-btn" data-brush="electric" title="Electric Arc">⚡</button>
+  <button class="brush-btn" data-brush="spray" title="Spray Can">💨</button>
+  <span class="divider"></span>
+  <button class="tool-btn" id="symmetryBtn">Mirror</button>
+  <button class="tool-btn" id="undoBtn">Undo</button>
+  <button class="tool-btn danger" id="clearBtn">Clear</button>
+  <button class="tool-btn accent" id="exportPng">Export</button>
+</div>
+
+<div id="sidePanel">
+  <div class="toggle-panel" id="toggleSidebar">+</div>
+  <label>Size <span id="sizeVal">16</span></label>
+  <input type="range" id="size" min="3" max="120" value="16">
+  <label>Glow <span id="glowVal">0.8</span></label>
+  <input type="range" id="glow" min="0.1" max="2.5" value="0.8" step="0.1">
+  <label>Trail <span id="trailVal">0.5</span></label>
+  <input type="range" id="trail" min="0.05" max="1" value="0.5" step="0.05">
+  <label>Sparkle ✦</label>
+  <input type="range" id="sparkle" min="0" max="1" value="0.3" step="0.05">
+  <label>Brush Color</label>
+  <input type="color" id="brushColorPicker" value="#ff5500">
+  <label>Background</label>
+  <input type="color" id="bgColor" value="#0a0a0a">
+</div>
+
+<div id="hud">
+  Particles: <span id="hudCount">0</span> &nbsp;·&nbsp; Brush: <span id="hudBrush">Neon Tube</span>
+</div>
+<div id="hint">Click & drag to paint &nbsp;·&nbsp; 1-6 for brushes &nbsp;·&nbsp; M for mirror &nbsp;·&nbsp; Z undo &nbsp;·&nbsp; Space = starburst &nbsp;·&nbsp; E export PNG</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+  var mainCanvas=document.getElementById('mainCanvas');
+  var ctx=mainCanvas.getContext('2d');
+  var overlayCanvas=document.getElementById('overlayCanvas');
+  var octx=overlayCanvas.getContext('2d');
+  var cursorEl=document.getElementById('cursor');
+  var toast=document.getElementById('toast');
+  var hudCount=document.getElementById('hudCount');
+  var hudBrush=document.getElementById('hudBrush');
+  var hint=document.getElementById('hint');
+  var sidePanel=document.getElementById('sidePanel');
+  var brushColorPicker=document.getElementById('brushColorPicker');
+
+  var W,H,brush='neon',drawing=false,prevX=0,prevY=0;
+  var params={size:16,glow:0.8,trail:0.5,sparkle:0.3,bgColor:'#0a0a0a'};
+  var customColor=null; // null = use brush default, hex string = override
+  var trails=[],undoStack=[];
+  var MAX_UNDO=30;
+  var symmetryMode='off';
+
+  // Intro block — auto-removes after animation
+  setTimeout(function(){var ib=document.getElementById('intro-block');if(ib)ib.remove();},1600);
+
+  function resize(){
+    W=window.innerWidth;H=window.innerHeight;
+    mainCanvas.width=W;mainCanvas.height=H;
+    overlayCanvas.width=W;overlayCanvas.height=H;
+    ctx.fillStyle=params.bgColor;ctx.fillRect(0,0,W,H);
+  }
+
+  function saveUndo(){
+    var data=ctx.getImageData(0,0,W,H);
+    undoStack.push(data);if(undoStack.length>MAX_UNDO)undoStack.shift();
+  }
+
+  // Parse hex to HSL for consistent manipulation
+  function hexToHsl(hex){
+    var r=parseInt(hex.slice(1,3),16)/255;
+    var g=parseInt(hex.slice(3,5),16)/255;
+    var b=parseInt(hex.slice(5,7),16)/255;
+    var max=Math.max(r,g,b),min=Math.min(r,g,b);
+    var h,s,l=(max+min)/2;
+    if(max===min){h=s=0;}
+    else{
+      var d=max-min;
+      s=l>0.5?d/(2-max-min):d/(max+min);
+      if(max===r)h=((g-b)/d+(g<b?6:0))/6;
+      else if(max===g)h=((b-r)/d+2)/6;
+      else h=((r-g)/d+4)/6;
+    }
+    return{h:h*360,s:s*100,l:l*100};
+  }
+
+  // Get color for a brush at time t — all orange-family
+  function brushColor(t){
+    if(customColor){
+      var hsl=hexToHsl(customColor);
+      var hVar=hsl.h+(Math.sin(t*0.002)*15);
+      var sVar=hsl.s+(Math.random()-0.5)*15;
+      var lVar=hsl.l+(Math.random()-0.5)*20;
+      return {css:'hsl('+hVar+','+Math.min(100,Math.max(40,sVar))+'%,'+Math.min(90,Math.max(20,lVar))+'%)'};
+    }
+
+    switch(brush){
+      case 'neon':
+        // Warm orange glow tube — gentle hue oscillation
+        var nh=(Math.sin(t*0.0015)*18+22);
+        return {css:'hsl('+nh+',100%,'+ (55+Math.random()*10)+'%)'};
+      case 'fire':
+        // Hot red-orange sparks with upward flicker
+        var r=255, g=65+Math.floor(Math.random()*110), b=Math.floor(Math.random()*25);
+        return {css:'rgb('+r+','+g+','+b+')'};
+      case 'meteor':
+        // White-hot to warm orange trail
+        var mhot=200+Math.floor(Math.random()*55);
+        return {css:'rgb(255,'+mhot+','+ (30+Math.floor(Math.random()*50))+')'};
+      case 'rainbow':
+        // Orange-red-gold cycling
+        var rh=(t*0.005)%50+5;
+        return {css:'hsl('+rh+',100%,'+ (50+Math.random()*15)+'%)'};
+      case 'electric':
+        // Bright orange-white crackle
+        var eb=180+Math.floor(Math.random()*75);
+        return {css:'rgb(255,'+eb+','+Math.floor(Math.random()*25)+')'};
+      case 'spray':
+        // Orange-gold random dots
+        var sh=12+Math.random()*38;
+        return {css:'hsl('+sh+',90%,'+ (45+Math.random()*30)+'%)'};
+      default:return {css:'#ff5500'};
+    }
+  }
+
+  function addTrailPoint(x,y){
+    var bc=brushColor(Date.now());
+    var count, spread, speed, lifeMult;
+
+    switch(brush){
+      case 'neon':  count=12; spread=params.size*0.3; speed=0.2; lifeMult=3.0; break;
+      case 'fire':  count=18; spread=params.size*0.9; speed=3.0; lifeMult=0.5; break;
+      case 'meteor':count=5;  spread=params.size*0.15;speed=6.0; lifeMult=0.3; break;
+      case 'rainbow':count=8; spread=params.size*0.7; speed=0.6; lifeMult=1.5; break;
+      case 'electric':count=3; spread=params.size*0.25;speed=8.0; lifeMult=0.25;break;
+      case 'spray': count=25; spread=params.size*1.5; speed=0.8; lifeMult=0.7; break;
+      default: count=4; spread=params.size*0.5; speed=1.0; lifeMult=1.0;
+    }
+
+    for(var i=0;i<count;i++){
+      var angle=Math.random()*Math.PI*2;
+      var dist=Math.random()*spread;
+      var vx,vy;
+      if(brush==='fire'){
+        vx=(Math.random()-0.5)*speed*2;
+        vy=-Math.random()*speed*3-0.5;
+      }else if(brush==='electric'){
+        vx=(Math.random()-0.5)*speed*3;
+        vy=(Math.random()-0.5)*speed*0.6;
+      }else if(brush==='spray'){
+        vx=Math.cos(angle)*speed*(0.5+Math.random());
+        vy=Math.sin(angle)*speed*(0.5+Math.random());
+      }else{
+        vx=(Math.random()-0.5)*speed;
+        vy=(Math.random()-0.5)*speed;
+      }
+
+      var col=brushColor(Date.now()+i*100);
+      trails.push({
+        x:x+Math.cos(angle)*dist,
+        y:y+Math.sin(angle)*dist,
+        vx:vx, vy:vy,
+        life:1,
+        decay:(0.003+Math.random()*0.01)/lifeMult,
+        size:(0.3+Math.random()*0.7)*params.size*(brush==='electric'?0.5:(brush==='neon'?1.8:1)),
+        color:col.css,
+        brush:brush,
+        isSparkle:false
+      });
+    }
+
+    // Sparkle particles
+    if(params.sparkle>0 && Math.random()<params.sparkle){
+      for(var s=0;s<3;s++){
+        var sa=Math.random()*Math.PI*2;
+        var sc=brushColor(Date.now()+s*50);
+        trails.push({
+          x:x+Math.cos(sa)*params.size*0.3,
+          y:y+Math.sin(sa)*params.size*0.3,
+          vx:Math.cos(sa)*3, vy:Math.sin(sa)*3,
+          life:1, decay:0.03+Math.random()*0.04,
+          size:1.5+Math.random()*3,
+          color:sc.css, brush:'sparkle', isSparkle:true
+        });
+      }
+    }
+
+    // Symmetry mirror
+    function mirrorPoint(mx,my){
+      var bc2=brushColor(Date.now()+Math.random()*500);
+      trails.push({
+        x:mx+(Math.random()-0.5)*params.size*0.4,
+        y:my+(Math.random()-0.5)*params.size*0.4,
+        vx:(Math.random()-0.5)*1.5, vy:(Math.random()-0.5)*1.5,
+        life:1, decay:0.005+Math.random()*0.008,
+        size:(0.4+Math.random()*0.6)*params.size,
+        color:bc2.css, brush:brush, isSparkle:false
+      });
+    }
+    if(symmetryMode==='h'||symmetryMode==='both') mirrorPoint(W-x, y);
+    if(symmetryMode==='v'||symmetryMode==='both') mirrorPoint(x, H-y);
+
+    while(trails.length>5000)trails.shift();
+    hudCount.textContent=trails.length;
+  }
+
+  function starburst(cx,cy){
+    saveUndo();
+    var count=80+Math.floor(Math.random()*40);
+    for(var i=0;i<count;i++){
+      var angle=(Math.PI*2*i)/count+Math.random()*0.2;
+      var dist=params.size*2+Math.random()*params.size*6;
+      var bc=brushColor(Date.now()+i*10);
+      trails.push({
+        x:cx+Math.cos(angle)*3, y:cy+Math.sin(angle)*3,
+        vx:Math.cos(angle)*(4+Math.random()*12),
+        vy:Math.sin(angle)*(4+Math.random()*12),
+        life:1, decay:0.008+Math.random()*0.015,
+        size:1+Math.random()*4,
+        color:bc.css, brush:brush, isSparkle:true
+      });
+    }
+    showToast('[ Starburst! ]');
+  }
+
+  function drawLine(x1,y1,x2,y2){
+    var dist=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+    var steps=Math.max(1,Math.floor(dist/4));
+    for(var i=0;i<=steps;i++){
+      var t=i/steps;
+      addTrailPoint(x1+(x2-x1)*t,y1+(y2-y1)*t);
+    }
+  }
+
+  function renderTrails(){
+    octx.clearRect(0,0,W,H);
+    for(var i=0;i<trails.length;i++){
+      var t=trails[i];
+      var alpha=t.life*params.glow;
+      if(t.isSparkle)alpha=Math.min(1,alpha*1.5);
+
+      // Glow halo for neon brush
+      if(t.brush==='neon' && t.life>0.3){
+        var grad=octx.createRadialGradient(t.x,t.y,0,t.x,t.y,t.size*1.2);
+        var glowCol=t.color.replace('hsl','hsla').replace(')',','+(alpha*0.3)+')');
+        if(glowCol===t.color)glowCol=t.color.replace('rgb','rgba').replace(')',','+(alpha*0.3)+')');
+        grad.addColorStop(0,glowCol);
+        grad.addColorStop(1,'rgba(0,0,0,0)');
+        octx.beginPath();octx.arc(t.x,t.y,t.size*1.2,0,Math.PI*2);
+        octx.fillStyle=grad;octx.fill();
+      }
+
+      octx.beginPath();
+      if(t.isSparkle){
+        var sz=t.size*2;
+        octx.moveTo(t.x,t.y-sz);octx.lineTo(t.x+sz*0.3,t.y-sz*0.3);
+        octx.lineTo(t.x+sz,t.y);octx.lineTo(t.x+sz*0.3,t.y+sz*0.3);
+        octx.lineTo(t.x,t.y+sz);octx.lineTo(t.x-sz*0.3,t.y+sz*0.3);
+        octx.lineTo(t.x-sz,t.y);octx.lineTo(t.x-sz*0.3,t.y-sz*0.3);
+        octx.closePath();
+      }else{
+        octx.arc(t.x,t.y,t.size*0.5,0,Math.PI*2);
+      }
+
+      var fillColor=t.color;
+      if(fillColor.indexOf('hsl')===0)fillColor=fillColor.replace(')',','+alpha+')').replace('hsl(','hsla(');
+      else fillColor=fillColor.replace(')',','+alpha+')').replace('rgb','rgba');
+      octx.fillStyle=fillColor;octx.fill();
+    }
+  }
+
+  function bakeTrails(){
+    ctx.drawImage(overlayCanvas,0,0);octx.clearRect(0,0,W,H);
+    for(var i=trails.length-1;i>=0;i--){
+      trails[i].life-=trails[i].decay;
+      trails[i].x+=trails[i].vx;
+      trails[i].y+=trails[i].vy;
+      if(trails[i].brush==='fire')trails[i].vy-=0.03;
+      if(trails[i].life<=0)trails.splice(i,1);
+    }
+  }
+
+  function animate(){
+    var fadeAlpha=0.005+params.trail*0.08;
+    octx.fillStyle='rgba(0,0,0,'+fadeAlpha+')';
+    octx.fillRect(0,0,W,H);
+    renderTrails();
+    if(drawing&&trails.length>2000)bakeTrails();
+    else if(!drawing)bakeTrails();
+    requestAnimationFrame(animate);
+  }
+
+  function getPos(e){
+    if(e.touches)return{x:e.touches[0].clientX,y:e.touches[0].clientY};
+    return{x:e.clientX,y:e.clientY};
+  }
+
+  // Events
+  overlayCanvas.style.pointerEvents='auto';
+  overlayCanvas.addEventListener('mousedown',function(e){
+    saveUndo();drawing=true;cursorEl.classList.add('drawing');
+    var pos=getPos(e);prevX=pos.x;prevY=pos.y;addTrailPoint(prevX,prevY);
+  });
+  overlayCanvas.addEventListener('mousemove',function(e){
+    var pos=getPos(e);
+    if(drawing)drawLine(prevX,prevY,pos.x,pos.y);
+    prevX=pos.x;prevY=pos.y;
+    cursorEl.style.left=e.clientX+'px';cursorEl.style.top=e.clientY+'px';
+  });
+  window.addEventListener('mouseup',function(){drawing=false;cursorEl.classList.remove('drawing');});
+
+  overlayCanvas.addEventListener('touchstart',function(e){
+    e.preventDefault();saveUndo();drawing=true;
+    var pos=getPos(e);prevX=pos.x;prevY=pos.y;addTrailPoint(prevX,prevY);
+  },{passive:false});
+  overlayCanvas.addEventListener('touchmove',function(e){
+    e.preventDefault();var pos=getPos(e);
+    if(drawing)drawLine(prevX,prevY,pos.x,pos.y);
+    prevX=pos.x;prevY=pos.y;
+  },{passive:false});
+  overlayCanvas.addEventListener('touchend',function(){drawing=false;});
+
+  // Custom cursor
+  document.addEventListener('mousemove',function(e){cursorEl.style.left=e.clientX+'px';cursorEl.style.top=e.clientY+'px';});
+  document.addEventListener('mousedown',function(){cursorEl.classList.add('click');});
+  document.addEventListener('mouseup',function(){cursorEl.classList.remove('click');});
+  document.querySelectorAll('button,input,.tool-btn,.brush-btn,.toggle-panel').forEach(function(el){
+    el.addEventListener('mouseenter',function(){cursorEl.classList.add('hover');});
+    el.addEventListener('mouseleave',function(){cursorEl.classList.remove('hover');});
+  });
+
+  // Intro block auto-removed above
+
+  // Sidebar toggle
+  document.getElementById('toggleSidebar').addEventListener('click',function(){sidePanel.classList.toggle('collapsed');});
+
+  // Toast
+  function showToast(msg){
+    toast.textContent=msg;toast.classList.add('show');
+    setTimeout(function(){toast.classList.remove('show');},2000);
+  }
+
+  // Symmetry toggle
+  document.getElementById('symmetryBtn').addEventListener('click',function(){
+    var modes=['off','h','v','both'];
+    var idx=modes.indexOf(symmetryMode);
+    symmetryMode=modes[(idx+1)%4];
+    var labels={off:t('mirrorOff'),h:t('mirrorH'),v:t('mirrorV'),both:t('mirrorBoth')};
+    var btn=document.getElementById('symmetryBtn');
+    btn.textContent=labels[symmetryMode];
+    if(symmetryMode!=='off')btn.classList.add('sym-active');
+    else btn.classList.remove('sym-active');
+    showToast('[ '+labels[symmetryMode]+' ]');
+  });
+
+  // Color picker
+  brushColorPicker.addEventListener('input',function(){
+    customColor=brushColorPicker.value;
+    showToast('[ Custom Color Set ]');
+  });
+  // Reset custom color when switching brushes
+  document.querySelectorAll('.brush-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.brush-btn').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');brush=btn.dataset.brush;
+      hudBrush.textContent=t('brushes.'+brush+'.name');
+      // Reset to brush default when switching brushes
+      customColor=null;
+      brushColorPicker.value='#ff5500';
+    });
+  });
+
+  // Actions
+  document.getElementById('clearBtn').addEventListener('click',function(){
+    saveUndo();ctx.fillStyle=params.bgColor;ctx.fillRect(0,0,W,H);
+    octx.clearRect(0,0,W,H);trails.length=0;hudCount.textContent='0';
+    showToast('[ Cleared ]');
+  });
+  document.getElementById('undoBtn').addEventListener('click',function(){
+    if(undoStack.length>0){ctx.putImageData(undoStack.pop(),0,0);octx.clearRect(0,0,W,H);trails.length=0;hudCount.textContent='0';showToast('[ Undo ]');}
+  });
+  document.getElementById('exportPng').addEventListener('click',function(){
+    var ec=document.createElement('canvas');ec.width=W;ec.height=H;
+    var ectx=ec.getContext('2d');
+    ectx.fillStyle=params.bgColor;ectx.fillRect(0,0,W,H);
+    ectx.drawImage(mainCanvas,0,0);ectx.drawImage(overlayCanvas,0,0);
+    var a=document.createElement('a');a.download='light-graffiti.png';a.href=ec.toDataURL('image/png');a.click();
+    showToast('[ Exported PNG ]');
+  });
+
+  // Sliders
+  document.getElementById('size').addEventListener('input',function(e){params.size=parseInt(e.target.value);document.getElementById('sizeVal').textContent=e.target.value;});
+  document.getElementById('glow').addEventListener('input',function(e){params.glow=parseFloat(e.target.value);document.getElementById('glowVal').textContent=e.target.value;});
+  document.getElementById('trail').addEventListener('input',function(e){params.trail=parseFloat(e.target.value);document.getElementById('trailVal').textContent=e.target.value;});
+  document.getElementById('sparkle').addEventListener('input',function(e){params.sparkle=parseFloat(e.target.value);});
+  document.getElementById('bgColor').addEventListener('input',function(e){params.bgColor=e.target.value;ctx.fillStyle=params.bgColor;ctx.fillRect(0,0,W,H);});
+
+  // Keyboard
+  document.addEventListener('keydown',function(e){
+    var brushes=['neon','fire','meteor','rainbow','electric','spray'];
+    if(e.key>='1'&&e.key<='6'){
+      var idx=parseInt(e.key)-1;brush=brushes[idx];
+      document.querySelectorAll('.brush-btn').forEach(function(b,i){b.classList.toggle('active',i===idx);});
+      hudBrush.textContent=t('brushes.'+brush+'.name');
+      customColor=null;brushColorPicker.value='#ff5500';
+    }
+    if(e.key==='m'||e.key==='M')document.getElementById('symmetryBtn').click();
+    if(e.key==='z'||e.key==='Z')document.getElementById('undoBtn').click();
+    if(e.key==='e'||e.key==='E')document.getElementById('exportPng').click();
+    if(e.key===' '){e.preventDefault();starburst(prevX||W/2,prevY||H/2);}
+  });
+
+  // Hide hint
+  setTimeout(function(){hint.style.opacity='0';setTimeout(function(){hint.remove();},1500);},8000);
+
+  resize();
+  window.addEventListener('resize',resize);
+  animate();
+
+  // ── Full-page i18n ──
+  var DICT={
+    en:{
+      pageTitle:'Light Graffiti — Luminous Canvas',
+      brushes:{
+        neon:{name:'Neon Tube',tooltip:'Neon Tube'},
+        fire:{name:'Fire Spark',tooltip:'Fire Spark'},
+        meteor:{name:'Meteor Trail',tooltip:'Meteor Trail'},
+        rainbow:{name:'Rainbow Ribbon',tooltip:'Rainbow Ribbon'},
+        electric:{name:'Electric Arc',tooltip:'Electric Arc'},
+        spray:{name:'Spray Can',tooltip:'Spray Can'}
+      },
+      symmetry:'Mirror',
+      mirrorOff:'Mirror: Off',
+      mirrorH:'Mirror: H',
+      mirrorV:'Mirror: V',
+      mirrorBoth:'Mirror: Both',
+      undo:'Undo',
+      clear:'Clear',
+      export:'Export',
+      panelSize:'Size',
+      panelGlow:'Glow',
+      panelTrail:'Trail',
+      panelSparkle:'Sparkle ✦',
+      panelBrushColor:'Brush Color',
+      panelBackground:'Background',
+      hudParticles:'Particles:',
+      hudBrush:'Brush:',
+      hint:'Click & drag to paint &nbsp;·&nbsp; 1-6 for brushes &nbsp;·&nbsp; M for mirror &nbsp;·&nbsp; Z undo &nbsp;·&nbsp; Space = starburst &nbsp;·&nbsp; E export PNG',
+      toastStarburst:'[ Starburst! ]',
+      toastCustomColor:'[ Custom Color Set ]',
+      toastCleared:'[ Cleared ]',
+      toastUndo:'[ Undo ]',
+      toastExported:'[ Exported PNG ]',
+      langLabel:'中'
+    },
+    zh:{
+      pageTitle:'光之涂鸦 — 流光画布',
+      brushes:{
+        neon:{name:'霓虹灯管',tooltip:'霓虹灯管'},
+        fire:{name:'火焰火花',tooltip:'火焰火花'},
+        meteor:{name:'流星拖尾',tooltip:'流星拖尾'},
+        rainbow:{name:'彩虹丝带',tooltip:'彩虹丝带'},
+        electric:{name:'电弧',tooltip:'电弧'},
+        spray:{name:'喷溅',tooltip:'喷溅'}
+      },
+      symmetry:'镜像',
+      mirrorOff:'镜像: 关',
+      mirrorH:'镜像: 水平',
+      mirrorV:'镜像: 垂直',
+      mirrorBoth:'镜像: 双向',
+      undo:'撤销',
+      clear:'清空',
+      export:'导出',
+      panelSize:'大小',
+      panelGlow:'发光',
+      panelTrail:'拖尾',
+      panelSparkle:'闪耀 ✦',
+      panelBrushColor:'画笔颜色',
+      panelBackground:'背景',
+      hudParticles:'粒子数:',
+      hudBrush:'画笔:',
+      hint:'点击拖拽绘画 &nbsp;·&nbsp; 1-6 切换画笔 &nbsp;·&nbsp; M 镜像 &nbsp;·&nbsp; Z 撤销 &nbsp;·&nbsp; 空格 = 星爆 &nbsp;·&nbsp; E 导出 PNG',
+      toastStarburst:'[ 星爆! ]',
+      toastCustomColor:'[ 自定义颜色已设置 ]',
+      toastCleared:'[ 已清空 ]',
+      toastUndo:'[ 已撤销 ]',
+      toastExported:'[ 已导出 PNG ]',
+      langLabel:'EN'
+    }
+  };
+  var _lang=localStorage.getItem('lang')||'en';
+  function t(key){
+    var keys=key.split('.'),val=DICT[_lang]||DICT.en;
+    for(var i=0;i<keys.length;i++){val=val[keys[i]];if(val===undefined)return key;}
+    return val;
+  }
+  function applyI18n(){
+    document.title=t('pageTitle');
+    document.querySelectorAll('.brush-btn').forEach(function(btn){
+      var b=btn.dataset.brush;
+      if(b&&DICT[_lang]&&DICT[_lang].brushes[b]){btn.title=DICT[_lang].brushes[b].tooltip;}
+    });
+    document.getElementById('hudBrush').textContent=t('brushes.'+brush+'.name');
+    document.getElementById('hint').innerHTML=t('hint');
+    var symBtn=document.getElementById('symmetryBtn');
+    var modeLabels={off:t('mirrorOff'),h:t('mirrorH'),v:t('mirrorV'),both:t('mirrorBoth')};
+    if(symmetryMode==='off')symBtn.textContent=t('symmetry');
+    else symBtn.textContent=modeLabels[symmetryMode];
+    document.getElementById('undoBtn').textContent=t('undo');
+    document.getElementById('clearBtn').textContent=t('clear');
+    document.getElementById('exportPng').textContent=t('export');
+
+    var sidePanel=document.getElementById('sidePanel');
+    var labels=sidePanel.querySelectorAll('label');
+    var labelKeys=['panelSize','panelGlow','panelTrail','panelSparkle','panelBrushColor','panelBackground'];
+    for(var i=0;i<labels.length&&i<labelKeys.length;i++){
+      var txt=t(labelKeys[i]);
+      var span=labels[i].querySelector('span');
+      if(span){labels[i].childNodes[0].nodeValue=txt+' ';}
+      else{labels[i].childNodes[0].nodeValue=txt;}
+    }
+    document.getElementById('langToggle').textContent=t('langLabel');
+    document.getElementById('langToggle').title=_lang==='zh'?'Switch to English':'切换到中文';
+    hudCount.parentNode.childNodes[0].nodeValue=t('hudParticles')+' ';
+    var hudBrushNode=document.getElementById('hudBrush').parentNode;
+    hudBrushNode.childNodes[2].nodeValue=' '+t('hudBrush')+' ';
+  }
+
+  document.getElementById('langToggle').addEventListener('click',function(){
+    _lang=_lang==='zh'?'en':'zh';
+    localStorage.setItem('lang',_lang);
+    applyI18n();
+  });
+
+  // Override showToast to use i18n keys for known messages
+  var _showToast=showToast;
+  showToast=function(msg){
+    var map={
+      '[ Starburst! ]':t('toastStarburst'),
+      '[ Custom Color Set ]':t('toastCustomColor'),
+      '[ Cleared ]':t('toastCleared'),
+      '[ Undo ]':t('toastUndo'),
+      '[ Exported PNG ]':t('toastExported')
+    };
+    var mapped=map[msg]||msg;
+    // Mirror mode toasts — rebuild from i18n
+    var symMap2={'[ Mirror: Off ]':'mirrorOff','[ Mirror: H ]':'mirrorH','[ Mirror: V ]':'mirrorV','[ Mirror: Both ]':'mirrorBoth'};
+    if(symMap2[msg])mapped='[ '+t(symMap2[msg])+' ]';
+    _showToast(mapped);
+  };
+
+  applyI18n();
+})();
+</script>
+</body>
+</html>

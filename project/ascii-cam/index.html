@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">ASCII Cam — Text Mode Vision</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg:#0a0a0a; --surface:#111; --text:#e8e8e8; --text-muted:#888;
+  --accent:#ff5500; --accent-glow:rgba(255,85,0,0.3); --border:#222;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --mono:'Courier New','Source Code Pro','Consolas',monospace;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  cursor:none;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+#cursor{
+  position:fixed;width:12px;height:12px;border:1.5px solid var(--accent);
+  border-radius:50%;pointer-events:none;z-index:9999;
+  transition:width 0.3s,height 0.3s;transform:translate(-50%,-50%);mix-blend-mode:difference;
+}
+#cursor.hover{width:32px;height:32px;background:rgba(255,85,0,0.15);border-color:#fff;}
+#cursor.click{width:8px;height:8px;background:var(--accent);border-color:var(--accent);}
+
+#noise{
+  position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:0.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+
+#loader{
+  position:fixed;inset:0;z-index:10000;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:24px;
+  transition:opacity 0.8s ease,visibility 0.8s ease;
+}
+#loader.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+#loader .counter{font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:0.2em;text-transform:uppercase;}
+#loader .bar{width:200px;height:1px;background:var(--border);overflow:hidden;border-radius:2px;}
+#loader .bar::after{content:'';position:absolute;left:0;top:0;height:100%;width:0;background:var(--accent);animation:loadBar 1.2s ease forwards;}
+
+@keyframes loadBar{to{width:100%;}}
+
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-start;
+  mix-blend-mode:difference;
+}
+nav .logo{
+  font-size:13px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#fff;
+  background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:var(--radius);
+  backdrop-filter:blur(10px);
+}
+nav .logo span{color:var(--accent);}
+nav .links{display:flex;gap:4px;}
+nav .links a{
+  color:rgba(255,255,255,0.6);text-decoration:none;
+  font-size:11px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;transition:all 0.3s;cursor:none;
+  padding:8px 16px;border-radius:var(--radius);
+}
+nav .links a:hover{color:#fff;background:rgba(255,255,255,0.06);}
+nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);}
+nav .lang-toggle{
+  background:none;border:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6);
+  font-size:11px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;transition:all 0.3s;cursor:none;
+  padding:8px 12px;border-radius:var(--radius);
+  font-family:var(--font);
+}
+nav .lang-toggle:hover{color:#fff;border-color:#fff;background:rgba(255,255,255,0.06);}
+
+#hero{
+  min-height:60vh;display:flex;align-items:center;justify-content:center;
+  padding:120px 40px 60px;position:relative;
+}
+#hero .content{text-align:center;max-width:720px;}
+#hero .eyebrow{
+  font-size:11px;font-weight:500;letter-spacing:0.25em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:24px;
+  opacity:0;transform:translateY(20px);
+  animation:revealUp 0.8s 0.3s ease forwards;
+  background:rgba(255,85,0,0.1);padding:6px 16px;border-radius:20px;display:inline-block;
+}
+#hero h1{
+  font-size:clamp(36px,6vw,72px);font-weight:300;line-height:1.1;
+  letter-spacing:-0.02em;margin-bottom:20px;
+  opacity:0;transform:translateY(20px);animation:revealUp 0.8s 0.5s ease forwards;
+}
+#hero h1 em{font-style:italic;font-weight:100;}
+#hero .subtitle{
+  font-size:16px;color:var(--text-muted);line-height:1.6;
+  max-width:480px;margin:0 auto;
+  opacity:0;transform:translateY(20px);animation:revealUp 0.8s 0.7s ease forwards;
+}
+@keyframes revealUp{to{opacity:1;transform:translateY(0);}}
+
+/* Viewport */
+#viewport{
+  position:relative;margin:0 40px 80px;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:#000;min-height:500px;overflow:hidden;
+  opacity:0;transform:translateY(40px);
+  transition:opacity 0.8s ease,transform 0.8s ease;
+}
+#viewport.visible{opacity:1;transform:translateY(0);}
+#viewport .ascii-wrap{
+  padding:20px;overflow:auto;max-height:70vh;
+  display:flex;align-items:center;justify-content:center;min-height:500px;
+}
+#asciiOutput{
+  font-family:var(--mono);line-height:1;white-space:pre;
+  display:inline-block;font-size:7px;letter-spacing:0;
+  transition:font-size 0.3s ease;
+}
+#asciiOutput.hidden{display:none;}
+#colorCanvas{display:none;image-rendering:pixelated;}
+#colorCanvas.visible{display:block;}
+#viewport .status-bar{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:12px 20px;display:flex;justify-content:space-between;
+  border-top:1px solid var(--border);
+  font-family:var(--mono);font-size:11px;color:var(--text-muted);
+  letter-spacing:0.1em;text-transform:uppercase;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);
+  border-radius:0 0 var(--radius) var(--radius);
+}
+#viewport .status-bar .live-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+  display:inline-block;margin-right:8px;animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+#controls{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);
+  z-index:200;background:rgba(17,17,17,0.95);
+  border:1px solid var(--border);border-radius:var(--radius) 0 0 var(--radius);
+  border-right:none;padding:32px 24px;
+  width:260px;backdrop-filter:blur(20px);
+  transition:transform 0.5s cubic-bezier(0.25,0.1,0.25,1);
+}
+#controls.collapsed{transform:translateY(-50%) translateX(220px);}
+#controls .toggle-panel{
+  position:absolute;left:-40px;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;background:rgba(17,17,17,0.95);
+  border:1px solid var(--border);border-right:none;
+  color:var(--text);font-size:16px;display:flex;
+  align-items:center;justify-content:center;
+  cursor:pointer;transition:color 0.3s;
+  border-radius:var(--radius) 0 0 var(--radius);
+}
+#controls .toggle-panel:hover{color:var(--accent);}
+#controls .section-label{
+  font-size:10px;font-weight:600;letter-spacing:0.2em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:20px;
+}
+#controls .control-group{margin-bottom:18px;}
+#controls label{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:11px;font-weight:500;letter-spacing:0.08em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;
+}
+#controls label .val{color:var(--accent);font-family:var(--mono);}
+#controls input[type="range"]{
+  -webkit-appearance:none;width:100%;height:2px;border-radius:2px;
+  background:var(--border);outline:none;
+}
+#controls input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);border:none;cursor:pointer;
+  transition:transform 0.2s;
+}
+#controls input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.4);}
+#controls .divider{height:1px;background:var(--border);margin:20px 0;}
+#controls .btn-group{display:flex;flex-direction:column;gap:8px;}
+#controls .btn{
+  background:none;border:1px solid var(--border);color:var(--text);
+  padding:10px 16px;font-family:var(--font);font-size:11px;
+  font-weight:500;letter-spacing:0.1em;text-transform:uppercase;
+  cursor:pointer;transition:all 0.3s;text-align:center;border-radius:8px;
+}
+#controls .btn:hover{border-color:var(--accent);color:var(--accent);}
+#controls .btn.primary{
+  background:var(--accent);border-color:var(--accent);color:#000;font-weight:600;
+}
+#controls .btn.primary:hover{background:#ff6a1a;}
+
+#info{
+  padding:80px 40px;border-top:1px solid var(--border);
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:60px;
+  opacity:0;transform:translateY(40px);
+  transition:opacity 0.8s ease,transform 0.8s ease;
+}
+#info.visible{opacity:1;transform:translateY(0);}
+#info .col .label{
+  font-size:10px;font-weight:600;letter-spacing:0.2em;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;
+}
+#info .col p{font-size:14px;color:var(--text-muted);line-height:1.7;}
+#info .col .stat{font-size:28px;color:var(--accent);font-weight:300;margin-bottom:4px;}
+
+#dropZone{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.9);display:flex;align-items:center;
+  justify-content:center;flex-direction:column;gap:16px;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity 0.4s,visibility 0.4s;
+  border:2px dashed transparent;border-radius:var(--radius);
+}
+#dropZone.active{opacity:1;visibility:visible;border-color:var(--accent);}
+#dropZone .dz-text{font-size:14px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--text);}
+#dropZone .dz-hint{font-size:12px;color:var(--text-muted);}
+
+#toast{
+  position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:1000;padding:12px 24px;
+  background:var(--surface);border:1px solid var(--accent);
+  font-size:12px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text);
+  opacity:0;transition:all 0.4s ease;border-radius:8px;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.bg-particle{
+  position:fixed;pointer-events:none;z-index:0;
+  border-radius:50%;background:var(--accent);
+  opacity:0;animation:floatUp 8s ease infinite;
+}
+@keyframes floatUp{
+  0%{opacity:0;transform:translateY(100vh) scale(0);}
+  10%{opacity:0.15;}90%{opacity:0;}
+  100%{transform:translateY(-10vh) scale(1.5);}
+}
+
+@media(max-width:768px){
+  nav{padding:20px 20px;}
+  #hero{padding:100px 20px 40px;min-height:40vh;}
+  #viewport{margin:0 20px 40px;}
+  #controls{width:220px;padding:24px 16px;}
+  #controls.collapsed{transform:translateY(-50%) translateX(185px);}
+  #info{grid-template-columns:1fr;gap:40px;padding:40px 20px;}
+}
+</style>
+</head>
+<body>
+
+<div id="noise"></div>
+<div id="cursor"></div>
+
+<div id="loader">
+  <div class="counter" id="loadCount">Loading 00</div>
+  <div class="bar"></div>
+</div>
+
+<nav>
+  <div class="logo">ASCII<span>Cam</span></div>
+  <div class="links">
+    <a href="#" class="active" data-mode="green" onclick="switchMode('green')">Green</a>
+    <a href="#" data-mode="color" onclick="switchMode('color')">Color</a>
+    <a href="#" data-mode="bw" onclick="switchMode('bw')">B/W</a>
+    <a href="#" data-source="image" onclick="switchSource('image')">Image</a>
+    <a href="#" data-source="webcam" onclick="switchSource('webcam')">Camera</a>
+    <button class="lang-toggle" onclick="toggleLang()" aria-label="Toggle language">EN</button>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="content">
+    <div class="eyebrow" id="heroEyebrow">Real-Time ASCII Art Engine</div>
+    <h1 id="heroTitle">Text Mode<br><em>Vision</em></h1>
+    <p class="subtitle" id="heroSubtitle">Transform your webcam feed into living ASCII art. Three rendering modes, real-time parameter control, and cinematic exports.</p>
+  </div>
+</section>
+
+<section id="viewport">
+  <div class="ascii-wrap">
+    <pre id="asciiOutput"></pre>
+    <canvas id="colorCanvas"></canvas>
+  </div>
+  <div class="status-bar">
+    <span><span class="live-dot"></span><span id="statusLive">Live</span> — <span id="fpsCounter">60</span> <span id="statusFps">fps</span></span>
+    <span id="modeIndicator">GREEN MODE</span>
+    <span id="resolutionIndicator">130 COL</span>
+  </div>
+</section>
+
+<div id="controls">
+  <div class="toggle-panel" id="togglePanel">+</div>
+  <div class="section-label" id="panelLabel">Parameters</div>
+  <div class="control-group">
+    <label><span id="labelDensity">Density</span> <span class="val" id="densityVal">130</span></label>
+    <input type="range" id="density" min="60" max="200" value="130" oninput="updateParam('density')">
+  </div>
+  <div class="control-group">
+    <label><span id="labelContrast">Contrast</span> <span class="val" id="contrastVal">100%</span></label>
+    <input type="range" id="contrast" min="50" max="200" value="100" oninput="updateParam('contrast')">
+  </div>
+  <div class="control-group">
+    <label><span id="labelBrightness">Brightness</span> <span class="val" id="brightnessVal">0</span></label>
+    <input type="range" id="brightness" min="-60" max="60" value="0" oninput="updateParam('brightness')">
+  </div>
+  <div class="control-group">
+    <label><span id="labelFontSize">Font Size</span> <span class="val" id="fontSizeVal">7px</span></label>
+    <input type="range" id="fontSize" min="4" max="14" value="7" oninput="updateParam('fontSize')">
+  </div>
+  <div class="divider"></div>
+  <div class="btn-group">
+    <button class="btn" id="btnExportTXT" onclick="exportTXT()">Export TXT</button>
+    <button class="btn primary" id="btnExportPNG" onclick="exportPNG()">Export PNG</button>
+  </div>
+</div>
+
+<section id="info">
+  <div class="col">
+    <div class="label" id="infoEngineLabel">Engine</div>
+    <div class="stat" id="totalPixels">—</div>
+    <p id="infoEngineDesc">Characters rendered per frame across the viewport grid. Each glyph maps to an average luminance value sampled from the source image.</p>
+  </div>
+  <div class="col">
+    <div class="label" id="infoProcessLabel">Process</div>
+    <p id="infoProcessDesc">Live video frames are captured at 640×480, divided into a density-scaled character grid. Each cell's RGB channels are averaged, luminance-calculated, then mapped to a 13-level character ramp for output.</p>
+  </div>
+  <div class="col">
+    <div class="label" id="infoRampLabel">Character Ramp</div>
+    <p style="font-family:var(--mono);font-size:13px;word-break:break-all;color:var(--text);">
+      [ . , - ~ : ; = ! * # $ @ ]
+    </p>
+    <p style="margin-top:8px;" id="infoRampDesc">Dark to bright — 13 levels of luminance quantization creating the ASCII aesthetic.</p>
+  </div>
+</section>
+
+<div id="toast"></div>
+<div id="dropZone">
+  <div class="dz-text" id="dzText">Drop Image Here</div>
+  <div class="dz-hint" id="dzHint">JPG / PNG / WebP — max 8MB</div>
+</div>
+
+<canvas id="hiddenCanvas" style="display:none"></canvas>
+<input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+
+<script>
+(function(){
+  var asciiOutput=document.getElementById('asciiOutput');
+  var colorCanvas=document.getElementById('colorCanvas');
+  var colorCtx=colorCanvas.getContext('2d');
+  var fpsEl=document.getElementById('fpsCounter');
+  var modeEl=document.getElementById('modeIndicator');
+  var resEl=document.getElementById('resolutionIndicator');
+  var densityVal=document.getElementById('densityVal');
+  var contrastVal=document.getElementById('contrastVal');
+  var brightnessVal=document.getElementById('brightnessVal');
+  var fontSizeVal=document.getElementById('fontSizeVal');
+  var totalPixels=document.getElementById('totalPixels');
+  var loader=document.getElementById('loader');
+  var loadCount=document.getElementById('loadCount');
+  var viewport=document.getElementById('viewport');
+  var info=document.getElementById('info');
+  var toast=document.getElementById('toast');
+  var cursor=document.getElementById('cursor');
+  var controls=document.getElementById('controls');
+  var dropZone=document.getElementById('dropZone');
+  var fileInput=document.getElementById('fileInput');
+  var hiddenCanvas=document.getElementById('hiddenCanvas');
+  var hiddenCtx=hiddenCanvas.getContext('2d',{willReadFrequently:true});
+
+  var mode='green',source='webcam';
+  var density=130,contrast=1.0,brightness=0,fontSize=7;
+  var videoEl=null,imageData=null,animId=null;
+  var fps=60,lastFPSTime=performance.now(),frameCount=0;
+  var charRamp=[' ','.',',','-','~',':',';','=','!','*','#','$','@'];
+
+  // Custom Cursor
+  document.addEventListener('mousemove',function(e){cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px';});
+  document.addEventListener('mousedown',function(){cursor.classList.add('click');});
+  document.addEventListener('mouseup',function(){cursor.classList.remove('click');});
+  document.querySelectorAll('button,a,input,.btn,.toggle-panel').forEach(function(el){
+    el.addEventListener('mouseenter',function(){cursor.classList.add('hover');});
+    el.addEventListener('mouseleave',function(){cursor.classList.remove('hover');});
+  });
+
+  // Loading
+  var loadProgress=0;
+  var loadInterval=setInterval(function(){
+    loadProgress+=Math.random()*15;if(loadProgress>100)loadProgress=100;
+    loadCount.textContent=t('loader.text')+' '+String(Math.floor(loadProgress)).padStart(2,'0');
+    if(loadProgress>=100){clearInterval(loadInterval);setTimeout(function(){loader.classList.add('hidden');},400);}
+  },100);
+  // Failsafe
+  setTimeout(function(){if(!loader.classList.contains('hidden'))loader.classList.add('hidden');},3000);
+
+  // Scroll Reveals
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible');});
+  },{threshold:0.15});
+  observer.observe(viewport);
+  observer.observe(info);
+
+  // Panel Toggle
+  document.getElementById('togglePanel').addEventListener('click',function(){controls.classList.toggle('collapsed');});
+
+  // Toast
+  function showToast(msg){
+    toast.textContent=msg;toast.classList.add('show');
+    setTimeout(function(){toast.classList.remove('show');},2000);
+  }
+
+  // FPS Counter
+  function updateFPS(){
+    frameCount++;var now=performance.now();
+    if(now-lastFPSTime>=1000){
+      fps=Math.round(frameCount/((now-lastFPSTime)/1000));
+      frameCount=0;lastFPSTime=now;fpsEl.textContent=fps;
+    }
+  }
+
+  // Show/hide output elements based on mode
+  function updateDisplayMode(){
+    if(mode==='green'){
+      asciiOutput.classList.remove('hidden');
+      colorCanvas.classList.remove('visible');
+    }else{
+      asciiOutput.classList.add('hidden');
+      colorCanvas.classList.add('visible');
+    }
+  }
+
+  // Param Updates
+  window.updateParam=function(name){
+    var el=document.getElementById(name);
+    if(name==='density'){density=parseInt(el.value);densityVal.textContent=density;resEl.textContent=density+' '+t('status.col');}
+    if(name==='contrast'){contrast=parseInt(el.value)/100;contrastVal.textContent=el.value+'%';}
+    if(name==='brightness'){brightness=parseInt(el.value);brightnessVal.textContent=el.value;}
+    if(name==='fontSize'){fontSize=parseInt(el.value);fontSizeVal.textContent=fontSize+'px';asciiOutput.style.fontSize=fontSize+'px';}
+    if(source==='image'&&imageData)render();
+  };
+
+  // Mode Switch
+  window.switchMode=function(m){
+    mode=m;
+    document.querySelectorAll('[data-mode]').forEach(function(a){a.classList.toggle('active',a.dataset.mode===m);});
+    modeEl.textContent=t('mode.'+m);
+    updateDisplayMode();
+    if(source==='image'&&imageData)render();
+  };
+
+  // Source Switch
+  window.switchSource=function(src){
+    source=src;
+    if(src==='webcam'){startWebcam();showToast(t('toast.camera'));}
+    else{if(animId){cancelAnimationFrame(animId);animId=null;}fileInput.click();}
+  };
+
+  // Webcam — append video to DOM so browser actually plays it
+  function startWebcam(){
+    if(videoEl)stopWebcam();
+    videoEl=document.createElement('video');
+    videoEl.autoplay=true;videoEl.playsInline=true;videoEl.muted=true;
+    videoEl.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
+    videoEl.setAttribute('playsinline','');
+    document.body.appendChild(videoEl);
+
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}})
+      .then(function(stream){
+        videoEl.srcObject=stream;
+        videoEl.play().then(function(){
+          hiddenCanvas.width=videoEl.videoWidth||640;
+          hiddenCanvas.height=videoEl.videoHeight||480;
+          loop();
+        }).catch(function(){
+          hiddenCanvas.width=640;hiddenCanvas.height=480;
+          loop();
+        });
+      })
+      .catch(function(){showToast(t('toast.cameraUnavailable'));source='image';});
+  }
+  function stopWebcam(){
+    if(animId){cancelAnimationFrame(animId);animId=null;}
+    if(videoEl){
+      if(videoEl.srcObject){videoEl.srcObject.getTracks().forEach(function(t){t.stop();});}
+      if(videoEl.parentNode)videoEl.parentNode.removeChild(videoEl);
+      videoEl=null;
+    }
+  }
+
+  // Render loop
+  function loop(){animId=requestAnimationFrame(loop);render();}
+
+  function render(){
+    updateFPS();
+    var w,h,data;
+    if(source==='webcam'&&videoEl){
+      try{
+        hiddenCtx.drawImage(videoEl,0,0,hiddenCanvas.width,hiddenCanvas.height);
+      }catch(e){return;}
+      w=hiddenCanvas.width;h=hiddenCanvas.height;
+      data=hiddenCtx.getImageData(0,0,w,h).data;
+    }else if(source==='image'&&imageData){
+      w=imageData.width;h=imageData.height;data=imageData.data;
+    }else return;
+
+    var cols=density;
+    var cw=w/cols;
+    var rows=Math.floor(h/cw*0.5);
+    var ch=h/rows;
+    if(totalPixels)totalPixels.textContent=(cols*rows).toLocaleString();
+
+    if(mode==='green'){
+      // ===== GREEN MODE: fast textContent =====
+      asciiOutput.style.color='#0f0';
+      var out='';
+      for(var y=0;y<rows;y++){
+        for(var x=0;x<cols;x++){
+          var sx=Math.floor(x*cw),sy=Math.floor(y*ch);
+          var idx=(sy*w+sx)*4;
+          var r=data[idx],g=data[idx+1],b=data[idx+2];
+          r=Math.min(255,Math.max(0,(r-128)*contrast+128+brightness));
+          g=Math.min(255,Math.max(0,(g-128)*contrast+128+brightness));
+          b=Math.min(255,Math.max(0,(b-128)*contrast+128+brightness));
+          var lum=0.299*r+0.587*g+0.114*b;
+          out+=charRamp[Math.min(charRamp.length-1,Math.floor(lum/255*charRamp.length))];
+        }
+        out+='\n';
+      }
+      asciiOutput.textContent=out;
+    }else{
+      // ===== COLOR / B/W MODE: colored blocks on canvas =====
+      // Each cell = one colored rectangle (pixel-art style, no fonts needed)
+      var blockW=Math.max(2,Math.floor(fontSize*0.65));
+      var blockH=Math.max(2,Math.floor(fontSize*1.0));
+      var cw_i=Math.ceil(cols*blockW);
+      var ch_i=Math.ceil(rows*blockH);
+
+      if(colorCanvas.width!==cw_i||colorCanvas.height!==ch_i){
+        colorCanvas.width=cw_i;
+        colorCanvas.height=ch_i;
+      }
+
+      // Black background
+      colorCtx.fillStyle='#000';
+      colorCtx.fillRect(0,0,cw_i,ch_i);
+
+      // Pre-allocate image data for direct pixel writing (MUCH faster than fillRect per cell)
+      var imgData=colorCtx.createImageData(cw_i,ch_i);
+      var px=imgData.data;
+
+      for(var y=0;y<rows;y++){
+        for(var x=0;x<cols;x++){
+          var sx=Math.floor(x*cw),sy=Math.floor(y*ch);
+          var idx=(sy*w+sx)*4;
+          var r=data[idx],g=data[idx+1],b=data[idx+2];
+          r=Math.min(255,Math.max(0,(r-128)*contrast+128+brightness));
+          g=Math.min(255,Math.max(0,(g-128)*contrast+128+brightness));
+          b=Math.min(255,Math.max(0,(b-128)*contrast+128+brightness));
+
+          var outR,outG,outB;
+          if(mode==='color'){
+            outR=r; outG=g; outB=b;
+          }else{
+            var gray=Math.floor(0.299*r+0.587*g+0.114*b);
+            outR=gray; outG=gray; outB=gray;
+          }
+
+          // Fill the block
+          var bx0=Math.floor(x*blockW), by0=Math.floor(y*blockH);
+          var bx1=Math.min(cw_i,Math.floor((x+1)*blockW));
+          var by1=Math.min(ch_i,Math.floor((y+1)*blockH));
+
+          for(var py=by0;py<by1;py++){
+            for(var px2=bx0;px2<bx1;px2++){
+              var pi=(py*cw_i+px2)*4;
+              px[pi]=outR; px[pi+1]=outG; px[pi+2]=outB; px[pi+3]=255;
+            }
+          }
+        }
+      }
+      colorCtx.putImageData(imgData,0,0);
+    }
+  }
+
+  // Image Handling
+  window.handleFileSelect=function(e){
+    var file=e.target.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      var img=new Image();
+      img.onload=function(){
+        var maxDim=800,nw=img.width,nh=img.height;
+        if(Math.max(nw,nh)>maxDim){var s=maxDim/Math.max(nw,nh);nw*=s;nh*=s;}
+        hiddenCanvas.width=nw;hiddenCanvas.height=nh;
+        hiddenCtx.drawImage(img,0,0,nw,nh);
+        imageData=hiddenCtx.getImageData(0,0,nw,nh);
+        if(source!=='image')source='image';
+        render();showToast(t('toast.image'));
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Drag & Drop
+  document.addEventListener('dragover',function(e){e.preventDefault();dropZone.classList.add('active');});
+  document.addEventListener('dragleave',function(){dropZone.classList.remove('active');});
+  document.addEventListener('drop',function(e){
+    e.preventDefault();dropZone.classList.remove('active');
+    if(e.dataTransfer.files.length){
+      var dt=new DataTransfer();dt.items.add(e.dataTransfer.files[0]);
+      fileInput.files=dt.files;handleFileSelect({target:{files:dt.files}});
+    }
+  });
+
+  // Exports
+  window.exportTXT=function(){
+    var txt=asciiOutput.textContent||'';
+    var blob=new Blob([txt],{type:'text/plain'});
+    download(blob,'ascii-art.txt');showToast(t('toast.txt'));
+  };
+  window.exportPNG=function(){
+    if(mode==='green'){
+      var lines=(asciiOutput.textContent||'').split('\n');
+      if(!lines.length)return;
+      var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+      ctx.font=fontSize+'px '+getComputedStyle(asciiOutput).fontFamily;
+      var mw=Math.max.apply(null,lines.map(function(l){return ctx.measureText(l).width;}));
+      var lh=fontSize*1.2;
+      canvas.width=mw+40;canvas.height=lines.length*lh+40;
+      ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.font=fontSize+'px '+getComputedStyle(asciiOutput).fontFamily;
+      ctx.fillStyle='#0f0';ctx.textBaseline='top';
+      lines.forEach(function(l,i){ctx.fillText(l,20,20+i*lh);});
+      canvas.toBlob(function(b){download(b,'ascii-art.png');});
+    }else{
+      colorCanvas.toBlob(function(b){download(b,'ascii-art.png');});
+    }
+    showToast(t('toast.png'));
+  };
+  function download(blob,name){
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // BG Particles
+  function spawnBgParticle(){
+    var p=document.createElement('div');p.className='bg-particle';
+    var size=2+Math.random()*4;
+    p.style.width=size+'px';p.style.height=size+'px';
+    p.style.left=Math.random()*100+'%';
+    p.style.animationDuration=(6+Math.random()*10)+'s';
+    p.style.animationDelay=Math.random()*3+'s';
+    document.body.appendChild(p);
+    p.addEventListener('animationend',function(){p.remove();});
+  }
+  setInterval(spawnBgParticle,3000);
+  for(var i=0;i<12;i++)spawnBgParticle();
+
+  // Keyboard
+  document.addEventListener('keydown',function(e){
+    if(e.key==='g')switchMode('green');
+    if(e.key==='c')switchMode('color');
+    if(e.key==='b')switchMode('bw');
+    if(e.key==='e')exportPNG();
+    if(e.key==='t')exportTXT();
+  });
+
+  // Init
+  asciiOutput.style.fontSize=fontSize+'px';
+  updateDisplayMode();
+  startWebcam();
+
+  // ── i18n ──
+  var _lang=localStorage.getItem('lang')||'en';
+  var _d={
+    en:{
+      // Page title
+      'page.title':'ASCII Cam — Text Mode Vision',
+      // Logo
+      'logo.ascii':'ASCII',
+      'logo.cam':'Cam',
+      // Hero
+      'hero.eyebrow':'Real-Time ASCII Art Engine',
+      'hero.title':'Text Mode<br><em>Vision</em>',
+      'hero.subtitle':'Transform your webcam feed into living ASCII art. Three rendering modes, real-time parameter control, and cinematic exports.',
+      // Nav links
+      'nav.green':'Green',
+      'nav.color':'Color',
+      'nav.bw':'B/W',
+      'nav.image':'Image',
+      'nav.camera':'Camera',
+      // Mode indicators
+      'mode.green':'GREEN MODE',
+      'mode.color':'COLOR MODE',
+      'mode.bw':'B/W MODE',
+      // Status bar
+      'status.live':'Live',
+      'status.fps':'fps',
+      'status.col':'COL',
+      // Drop zone
+      'drop.text':'Drop Image Here',
+      'drop.hint':'JPG / PNG / WebP — max 8MB',
+      // Control panel
+      'panel.label':'Parameters',
+      'panel.density':'Density',
+      'panel.contrast':'Contrast',
+      'panel.brightness':'Brightness',
+      'panel.fontSize':'Font Size',
+      // Buttons
+      'btn.exportTXT':'Export TXT',
+      'btn.exportPNG':'Export PNG',
+      // Info section
+      'info.engine':'Engine',
+      'info.engineDesc':'Characters rendered per frame across the viewport grid. Each glyph maps to an average luminance value sampled from the source image.',
+      'info.process':'Process',
+      'info.processDesc':'Live video frames are captured at 640×480, divided into a density-scaled character grid. Each cell\'s RGB channels are averaged, luminance-calculated, then mapped to a 13-level character ramp for output.',
+      'info.ramp':'Character Ramp',
+      'info.rampDesc':'Dark to bright — 13 levels of luminance quantization creating the ASCII aesthetic.',
+      // Loader
+      'loader.text':'Loading',
+      // Toast messages
+      'toast.camera':'[ Camera Active ]',
+      'toast.image':'[ Image Loaded ]',
+      'toast.txt':'[ TXT Exported ]',
+      'toast.png':'[ PNG Exported ]',
+      'toast.cameraUnavailable':'[ Camera Unavailable ]',
+      // Lang toggle
+      'lang.toggle':'EN'
+    },
+    zh:{
+      'page.title':'ASCII Cam — 文本模式视觉',
+      'logo.ascii':'ASCII',
+      'logo.cam':'摄像',
+      'hero.eyebrow':'实时 ASCII 艺术引擎',
+      'hero.title':'文本模式<br><em>视觉</em>',
+      'hero.subtitle':'将您的摄像头画面转化为生动的 ASCII 艺术。三种渲染模式，实时参数控制，电影级导出。',
+      'nav.green':'绿屏',
+      'nav.color':'彩色',
+      'nav.bw':'黑白',
+      'nav.image':'图片',
+      'nav.camera':'摄像头',
+      'mode.green':'绿屏模式',
+      'mode.color':'彩色模式',
+      'mode.bw':'黑白模式',
+      'status.live':'实时',
+      'status.fps':'帧',
+      'status.col':'列',
+      'drop.text':'将图片拖放到此处',
+      'drop.hint':'JPG / PNG / WebP — 最大 8MB',
+      'panel.label':'参数',
+      'panel.density':'密度',
+      'panel.contrast':'对比度',
+      'panel.brightness':'亮度',
+      'panel.fontSize':'字号',
+      'btn.exportTXT':'导出 TXT',
+      'btn.exportPNG':'导出 PNG',
+      'info.engine':'引擎',
+      'info.engineDesc':'每帧在视口网格中渲染的字符数。每个字符映射到从源图像采样的平均亮度值。',
+      'info.process':'处理',
+      'info.processDesc':'实时视频帧以 640×480 分辨率捕获，分割为密度缩放的字符网格。每个单元格的 RGB 通道取平均值，计算亮度，然后映射到 13 级字符阶梯进行输出。',
+      'info.ramp':'字符阶梯',
+      'info.rampDesc':'从暗到亮 — 13 级亮度量化，营造 ASCII 美学。',
+      'loader.text':'加载中',
+      'toast.camera':'[ 摄像头已激活 ]',
+      'toast.image':'[ 图片已加载 ]',
+      'toast.txt':'[ 已导出 TXT ]',
+      'toast.png':'[ 已导出 PNG ]',
+      'toast.cameraUnavailable':'[ 摄像头不可用 ]',
+      'lang.toggle':'中文'
+    }
+  };
+  function t(k){return (_d[_lang]||_d.en)[k]||k;}
+  function setLang(l){
+    _lang=l;
+    localStorage.setItem('lang',l);
+    applyI18n();
+  }
+  function toggleLang(){
+    setLang(_lang==='en'?'zh':'en');
+  }
+  function applyI18n(){
+    // Update html lang attribute
+    document.documentElement.lang=_lang;
+    // Page title
+    document.getElementById('pageTitle').textContent=t('page.title');
+    // Logo
+    var logoEl=document.querySelector('nav .logo');
+    logoEl.innerHTML=t('logo.ascii')+'<span>'+t('logo.cam')+'</span>';
+    // Hero
+    document.getElementById('heroEyebrow').textContent=t('hero.eyebrow');
+    document.getElementById('heroTitle').innerHTML=t('hero.title');
+    document.getElementById('heroSubtitle').textContent=t('hero.subtitle');
+    // Nav link text
+    document.querySelectorAll('[data-mode]').forEach(function(a){
+      a.textContent=t('nav.'+a.dataset.mode);
+    });
+    document.querySelectorAll('nav .links a[data-source]').forEach(function(a){
+      a.textContent=t('nav.'+a.dataset.source);
+    });
+    // Mode indicator
+    document.getElementById('modeIndicator').textContent=t('mode.'+mode);
+    // Status bar
+    document.getElementById('statusLive').textContent=t('status.live');
+    document.getElementById('statusFps').textContent=t('status.fps');
+    document.getElementById('resolutionIndicator').textContent=density+' '+t('status.col');
+    // Drop zone
+    document.getElementById('dzText').textContent=t('drop.text');
+    document.getElementById('dzHint').textContent=t('drop.hint');
+    // Control panel
+    document.getElementById('panelLabel').textContent=t('panel.label');
+    document.getElementById('labelDensity').textContent=t('panel.density');
+    document.getElementById('labelContrast').textContent=t('panel.contrast');
+    document.getElementById('labelBrightness').textContent=t('panel.brightness');
+    document.getElementById('labelFontSize').textContent=t('panel.fontSize');
+    // Buttons
+    document.getElementById('btnExportTXT').textContent=t('btn.exportTXT');
+    document.getElementById('btnExportPNG').textContent=t('btn.exportPNG');
+    // Info section
+    document.getElementById('infoEngineLabel').textContent=t('info.engine');
+    document.getElementById('infoEngineDesc').textContent=t('info.engineDesc');
+    document.getElementById('infoProcessLabel').textContent=t('info.process');
+    document.getElementById('infoProcessDesc').textContent=t('info.processDesc');
+    document.getElementById('infoRampLabel').textContent=t('info.ramp');
+    document.getElementById('infoRampDesc').textContent=t('info.rampDesc');
+    // Lang toggle
+    document.querySelector('.lang-toggle').textContent=t('lang.toggle');
+    // Loader count text (animation updates it, but initial format respects i18n)
+    updateLoaderText();
+  }
+  function updateLoaderText(){
+    var pct=Math.floor(loadProgress);
+    document.getElementById('loadCount').textContent=t('loader.text')+' '+String(pct).padStart(2,'0');
+  }
+  // Apply i18n on init
+  applyI18n();
+})();
+</script>
+</body>
+</html>

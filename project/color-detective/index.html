@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Detective</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="intro-block"></div>
+  <div id="scanlines"></div>
+  <div class="scroll-progress" id="scrollProgress"></div>
+  <div class="custom-cursor" id="cursor"></div>
+
+  <!-- ═══ Navigation ═══ -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1"/>
+          <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1"/>
+          <line x1="10" y1="1" x2="10" y2="6" stroke="currentColor" stroke-width="1"/>
+          <line x1="10" y1="14" x2="10" y2="19" stroke="currentColor" stroke-width="1"/>
+          <line x1="1" y1="10" x2="6" y2="10" stroke="currentColor" stroke-width="1"/>
+          <line x1="14" y1="10" x2="19" y2="10" stroke="currentColor" stroke-width="1"/>
+        </svg>
+        <span data-i18n="brandName">Color Detective</span>
+      </div>
+      <div class="nav-links">
+        <span class="nav-link active" data-i18n="navExtract">Extract</span>
+        <span class="nav-link" id="btnReUpload" data-i18n="navReUpload">Re-upload</span>
+        <button class="lang-toggle" id="btnLangToggle" aria-label="Toggle language" title="Toggle language">EN</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ Main ═══ -->
+  <main class="main" id="main">
+
+    <!-- ─── Hero / Upload ─── -->
+    <section class="hero" id="uploadZone">
+      <div class="hero-text">
+        <h1 class="hero-title">
+          <span data-i18n="heroTitleLine1">Extract</span><br>
+          <span class="hero-accent" data-i18n="heroTitleAccent">Colors</span>
+        </h1>
+        <p class="hero-desc" data-i18n="heroDesc">Upload any image to auto-extract dominant colors and generate professional color schemes</p>
+      </div>
+
+      <div class="upload" id="uploadContent">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="upload-area" id="uploadArea">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="upload-icon">
+            <rect x="2" y="6" width="28" height="20" rx="1.5" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+            <circle cx="12" cy="14" r="4" stroke="currentColor" stroke-width="1"/>
+            <line x1="14" y1="13" x2="24" y2="21" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            <line x1="24" y1="13" x2="20" y2="17" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+          <span class="upload-text" data-i18n="uploadText">Drag & drop or click to browse</span>
+          <span class="upload-hint" data-i18n="uploadHint">JPG · PNG · WebP</span>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview hidden" id="previewWrap">
+        <div class="preview-frame">
+          <img id="previewImage" alt="">
+        </div>
+        <button class="preview-close" id="btnClosePreview" data-i18n-title="previewClose">✕</button>
+      </div>
+    </section>
+
+    <!-- ─── Results ─── -->
+    <div class="results hidden" id="results">
+
+      <!-- 01 Dominant Colors -->
+      <section class="sec" id="dominantSection">
+        <div class="sec-head">
+          <span class="sec-num">01</span>
+          <h2 class="sec-label" data-i18n="secDominant">Dominant Colors</h2>
+          <span class="sec-line"></span>
+          <span class="sec-tag">DOMINANT</span>
+        </div>
+        <div class="dominant" id="dominantStrip"></div>
+        <div class="sec-actions" id="dominantActions">
+          <button class="act" data-copy="hex" data-i18n="btnCopyHex">⎘ Copy All Hex</button>
+          <button class="act" data-copy="css" data-i18n="btnExportCSS">◈ Export CSS Variables</button>
+          <button class="act" id="btnExportPalette" data-i18n="btnExportPalette">⬇ Export Palette</button>
+        </div>
+      </section>
+
+      <!-- 02 Color Schemes -->
+      <section class="sec" id="schemeSection">
+        <div class="sec-head">
+          <span class="sec-num">02</span>
+          <h2 class="sec-label" data-i18n="secSchemes">Color Schemes</h2>
+          <span class="sec-line"></span>
+          <span class="sec-tag">HARMONIES</span>
+        </div>
+        <div class="schemes" id="schemes"></div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="footer">
+    <span class="footer-dash"></span>
+    <p data-i18n="footerText">Browser-side processing · Images never leave your device</p>
+  </footer>
+
+  <!-- ═══ Toast ═══ -->
+  <div class="toast" id="toast">
+    <span class="toast-icon">○</span>
+    <span class="toast-msg"></span>
+  </div>
+
+  <!-- ═══ Loader ═══ -->
+  <div class="loader-screen hidden" id="loaderScreen">
+    <div class="loader-counter" id="loaderCounter" data-i18n="loaderProcessing">Processing</div>
+    <div class="loader-bar"></div>
+  </div>
+
+  <!-- Intro + Custom cursor + Scroll progress -->
+  <script>
+    setTimeout(function(){var ib=document.getElementById('intro-block');if(ib)ib.remove();},1600);
+    const cursor = document.getElementById('cursor');
+    let mx = 0, my = 0, cx = 0, cy = 0;
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+    document.addEventListener('mousedown', () => cursor.classList.add('click'));
+    document.addEventListener('mouseup', () => cursor.classList.remove('click'));
+    document.querySelectorAll('button, a, input, .upload-area, .color-block, .scheme-strip, .scheme-swatch, [role="button"]').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+    });
+    function animateCursor() {
+      cx += (mx - cx) * 0.15;
+      cy += (my - cy) * 0.15;
+      cursor.style.left = cx + 'px';
+      cursor.style.top = cy + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+    // Scroll progress bar
+    window.addEventListener('scroll', () => {
+      const scrollH = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = scrollH > 0 ? (window.scrollY / scrollH) * 100 : 0;
+      const bar = document.getElementById('scrollProgress');
+      if (bar) bar.style.width = pct + '%';
+    });
+  </script>
+
+  <script src="js/i18n.js"></script>
+  <script>
+  // Boot i18n — must be before other modules that reference window._i18n
+  window._i18n = new I18n({
+    lang: localStorage.getItem('lang') || 'en',
+    onReady: function () {
+      document.documentElement.lang = this.lang
+      document.title = this.t('pageTitle')
+      this.applyToDOM()
+    }
+  })
+  </script>
+  <script src="js/pixel-sampler.js"></script>
+  <script src="js/kmeans.js"></script>
+  <script src="js/palette.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/uploader.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

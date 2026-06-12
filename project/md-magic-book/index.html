@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="pageTitle">Markdown Magic Book</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+
+  <div id="intro-block"></div>
+  <div id="scanlines"></div>
+  <div class="custom-cursor" id="cursor"></div>
+
+  <!-- ═══ Nav ═══ -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="3" width="16" height="14" rx="1" stroke="currentColor" stroke-width="1"/>
+          <line x1="5" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1"/>
+          <line x1="5" y1="10" x2="12" y2="10" stroke="currentColor" stroke-width="1"/>
+          <line x1="5" y1="13" x2="10" y2="13" stroke="currentColor" stroke-width="1"/>
+        </svg>
+        <span data-i18n="brandName">Magic Book</span>
+      </div>
+      <div class="nav-links-left">
+        <button class="nav-link active" data-view="split" data-i18n="viewSplit">Split</button>
+        <button class="nav-link" data-view="preview" data-i18n="viewPreview">Preview</button>
+        <button class="nav-link" data-view="edit" data-i18n="viewEdit">Edit</button>
+      </div>
+      <div class="nav-links">
+        <button class="nav-link" id="btnTemplate" data-i18n="btnTemplate">📄 Template</button>
+        <button class="nav-link" id="btnExportMD" data-i18n="btnExportMD">⬇ Download .md</button>
+        <button class="nav-link" id="btnExportHTML" data-i18n="btnExportHTML">⎘ Export HTML</button>
+        <button class="nav-link" id="btnPresent" data-i18n="btnPresent">🎬 Present</button>
+        <button class="nav-link lang-toggle" id="btnLang" title="Switch Language">🌐</button>
+        <input type="file" id="fileInput" accept=".md" hidden>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ Editor ─── -->
+  <main class="main-view entered" id="mainView">
+    <div class="main">
+      <div class="editor" id="editor">
+        <textarea class="editor-input" id="editorInput" spellcheck="false" data-i18n-placeholder="editorPlaceholder" placeholder="Start writing Markdown…"></textarea>
+        <div class="editor-preview" id="editorPreview"></div>
+      </div>
+      <div class="status-bar">
+        <span class="status-item" id="statusLines">0 lines</span>
+        <span class="status-item" id="statusWords">0 words</span>
+        <span class="status-item" id="statusChars">0 chars</span>
+        <span class="status-item" id="statusSave">💾</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══ Presentation ─── -->
+  <div class="presentation page" id="presentation">
+    <div class="pres-header">
+      <div class="pres-counter" id="presCounter">1 / 1</div>
+      <div class="pres-nav">
+        <button class="pres-btn" id="presPrev" data-i18n="presPrev">← Prev</button>
+        <button class="pres-btn" id="presNext" data-i18n="presNext">Next →</button>
+        <button class="pres-btn" id="presExit" data-i18n="presExit">✕ Exit</button>
+      </div>
+    </div>
+    <div class="pres-slide" id="presSlide"></div>
+    <button class="pres-arrow pres-arrow--left" id="presArrowLeft">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 4L7 12L15 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="pres-arrow pres-arrow--right" id="presArrowRight">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 4L17 12L9 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <!-- invisible click zones on slide edges -->
+    <div class="pres-click-zone pres-click-zone--left" id="presClickLeft"></div>
+    <div class="pres-click-zone pres-click-zone--right" id="presClickRight"></div>
+  </div>
+
+  <script src="js/editor.js"></script>
+  <script src="js/presentation.js"></script>
+  <script src="js/main.js"></script>
+
+  <!-- Intro + Custom cursor -->
+  <script>
+    setTimeout(function(){var ib=document.getElementById('intro-block');if(ib)ib.remove();},1600);
+    const cursor = document.getElementById('cursor');
+    let mx = 0, my = 0, cx = 0, cy = 0;
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+    document.addEventListener('mousedown', () => cursor.classList.add('click'));
+    document.addEventListener('mouseup', () => cursor.classList.remove('click'));
+    document.querySelectorAll('button, a, input, textarea, [role="button"]').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+    });
+    function animateCursor() {
+      cx += (mx - cx) * 0.15;
+      cy += (my - cy) * 0.15;
+      cursor.style.left = cx + 'px';
+      cursor.style.top = cy + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+  </script>
+  <script>
+  /* ═══ i18n DICT ═══ */
+  var DICT = {
+    en: {
+      pageTitle: 'Markdown Magic Book',
+      brandName: 'Magic Book',
+      viewSplit: 'Split',
+      viewPreview: 'Preview',
+      viewEdit: 'Edit',
+      btnTemplate: '📄 Template',
+      btnExportMD: '⬇ Download .md',
+      btnExportHTML: '⎘ Export HTML',
+      btnPresent: '🎬 Present',
+      btnLang: '🌐',
+      editorPlaceholder: 'Start writing Markdown…',
+      statusLines: '{n} lines',
+      statusWords: '{n} words',
+      statusChars: '{n} chars',
+      statusSaved: '💾 Saved',
+      presPrev: '← Prev',
+      presNext: 'Next →',
+      presExit: '✕ Exit',
+      previewEmpty: 'Start typing to see the preview…'
+    },
+    zh: {
+      pageTitle: 'Markdown 魔法书',
+      brandName: '魔法书',
+      viewSplit: '分栏',
+      viewPreview: '预览',
+      viewEdit: '编辑',
+      btnTemplate: '📄 模板',
+      btnExportMD: '⬇ 下载 .md',
+      btnExportHTML: '⎘ 导出 HTML',
+      btnPresent: '🎬 演示',
+      btnLang: '🌐',
+      editorPlaceholder: '开始写 Markdown…',
+      statusLines: '{n} 行',
+      statusWords: '{n} 字',
+      statusChars: '{n} 字符',
+      statusSaved: '💾 已保存',
+      presPrev: '← 上一页',
+      presNext: '下一页 →',
+      presExit: '✕ 退出',
+      previewEmpty: '开始输入以查看预览…'
+    }
+  };
+
+  var _lang = localStorage.getItem('lang') || 'en';
+
+  function t(key, params) {
+    var s = (DICT[_lang] && DICT[_lang][key]) ? DICT[_lang][key] : (DICT.en[key] || key);
+    if (params) {
+      Object.keys(params).forEach(function(k) {
+        s = s.replace('{' + k + '}', params[k]);
+      });
+    }
+    return s;
+  }
+
+  function applyI18n() {
+    /* data-i18n */
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      el.textContent = t(key);
+    });
+    /* data-i18n-placeholder */
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n-placeholder');
+      el.placeholder = t(key);
+    });
+    /* page title */
+    document.title = t('pageTitle');
+  }
+
+  function toggleLang() {
+    _lang = _lang === 'zh' ? 'en' : 'zh';
+    localStorage.setItem('lang', _lang);
+    applyI18n();
+    /* re-trigger status update so counters use new language */
+    if (typeof updateStatusI18n === 'function') updateStatusI18n();
+    /* update lang-toggle tooltip */
+    var btn = document.getElementById('btnLang');
+    if (btn) btn.title = _lang === 'zh' ? 'Switch to English' : '切换中文';
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    applyI18n();
+    var btn = document.getElementById('btnLang');
+    if (btn) {
+      btn.title = _lang === 'zh' ? 'Switch to English' : '切换中文';
+      btn.addEventListener('click', toggleLang);
+    }
+  });
+
+  /* call immediately if DOM already loaded; DOMContentLoaded covers the rest */
+  if (document.readyState !== 'loading') {
+    applyI18n();
+    var btn2 = document.getElementById('btnLang');
+    if (btn2) {
+      btn2.title = _lang === 'zh' ? 'Switch to English' : '切换中文';
+      btn2.addEventListener('click', toggleLang);
+    }
+  }
+  </script>
+</body>
+</html>

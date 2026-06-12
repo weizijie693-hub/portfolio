@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Galaxy — Orange Fireworks</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg:#0a0a0a;--surface:#111;--text:#e8e8e8;--text-muted:#888;
+  --accent:#ff5500;--accent-glow:rgba(255,85,0,0.3);--border:#222;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  cursor:none;overflow:hidden;height:100vh;
+  -webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;
+}
+
+canvas{display:block;position:fixed;top:0;left:0;}
+
+/* Custom Cursor */
+#cursor{
+  position:fixed;width:12px;height:12px;border:1.5px solid var(--accent);
+  border-radius:50%;pointer-events:none;z-index:9999;
+  transition:width 0.3s,height 0.3s,border-color 0.3s,background 0.3s;
+  transform:translate(-50%,-50%);mix-blend-mode:difference;
+}
+#cursor.hover{width:32px;height:32px;background:rgba(255,85,0,0.15);border-color:#fff;}
+#cursor.click{width:8px;height:8px;background:var(--accent);border-color:var(--accent);}
+#cursor.repel{border-color:#ff3333;background:rgba(255,50,50,0.15);}
+
+/* Noise */
+#noise{
+  position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:0.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+
+/* ── Intro Block ── */
+#intro-block{
+  position:fixed;inset:0;z-index:10001;background:var(--accent);
+  animation:introIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards,
+           introOut 0.6s 0.8s cubic-bezier(0.16,1,0.3,1) forwards;
+  pointer-events:none;
+}
+@keyframes introIn{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes introOut{from{transform:translateY(0);opacity:1}to{transform:translateY(105%);opacity:1}}
+
+/* Top Bar */
+#topBar{
+  position:fixed;top:28px;left:50%;transform:translateX(-50%);
+  z-index:100;display:flex;align-items:center;
+  background:rgba(17,17,17,0.95);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  backdrop-filter:blur(20px);
+}
+#topBar .top-btn{
+  background:none;border:none;color:var(--text-muted);
+  padding:0 24px;height:44px;cursor:pointer;
+  font-family:var(--font);font-size:10px;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;
+  border-left:1px solid var(--border);transition:all 0.3s;
+}
+#topBar .top-btn:first-child{border-left:none;}
+#topBar .top-btn:hover{color:var(--accent);}
+#topBar .top-btn.accent{background:var(--accent);color:#000;font-weight:600;}
+#topBar .top-btn.accent:hover{background:#ff6a1a;color:#000;}
+
+/* Lang toggle — fixed top-right */
+.lang-toggle {
+  position: fixed; top: 24px; right: 24px; z-index: 101;
+  background: rgba(17,17,17,0.9); border: 1px solid var(--border);
+  color: var(--text-muted); width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font); font-size: 11px; font-weight: 600;
+  border-radius: 50%; cursor: pointer;
+  backdrop-filter: blur(20px); transition: all 0.3s;
+}
+.lang-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Panel Toggle */
+#panelToggle{
+  position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:110;
+  width:36px;height:36px;background:rgba(17,17,17,0.95);
+  border:1px solid var(--border);color:var(--text);
+  font-size:16px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;
+  transition:all 0.3s;border-radius:8px;
+}
+#panelToggle:hover{color:var(--accent);border-color:var(--accent);}
+
+/* Side Panel */
+#sidePanel{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);
+  background:rgba(17,17,17,0.95);border:1px solid var(--border);
+  border-right:none;padding:28px 20px;z-index:100;width:200px;
+  display:flex;flex-direction:column;gap:14px;
+  backdrop-filter:blur(20px);
+  border-radius:var(--radius) 0 0 var(--radius);
+  transition:transform 0.5s cubic-bezier(0.25,0.1,0.25,1),opacity 0.5s;
+}
+#sidePanel.hidden{transform:translateY(-50%) translateX(210px);opacity:0;pointer-events:none;}
+#sidePanel label{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:9px;font-weight:600;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text-muted);
+}
+#sidePanel label span{color:var(--accent);}
+#sidePanel input[type="range"]{
+  -webkit-appearance:none;width:100%;height:2px;background:var(--border);outline:none;border-radius:2px;
+}
+#sidePanel input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;transition:transform 0.2s;
+}
+#sidePanel input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.4);}
+
+/* HUD */
+#hud{
+  position:fixed;left:28px;bottom:28px;z-index:100;
+  font-size:10px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text-muted);
+  pointer-events:none;
+}
+#hud span{color:var(--accent);}
+
+/* Hint */
+#hint{
+  position:fixed;left:50%;bottom:40px;transform:translateX(-50%);
+  z-index:100;color:rgba(255,255,255,0.15);
+  font-size:12px;letter-spacing:0.08em;
+  pointer-events:none;transition:opacity 1.5s;
+}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:1000;padding:12px 24px;
+  background:var(--surface);border:1px solid var(--accent);
+  font-size:12px;font-weight:500;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text);
+  opacity:0;transition:all 0.4s ease;border-radius:8px;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Supernova flash */
+#flash{
+  position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:radial-gradient(circle,rgba(255,85,0,0.25) 0%,rgba(255,120,20,0.1) 50%,transparent 70%);
+  opacity:0;transition:opacity 0.15s ease;
+}
+#flash.active{opacity:1;}
+
+@media(max-width:768px){
+  #sidePanel{width:160px;padding:20px 14px;}
+  #topBar .top-btn{padding:0 14px;font-size:9px;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="noise"></div>
+<div id="cursor"></div>
+<div id="flash"></div>
+
+<div id="intro-block"></div>
+
+<div id="topBar">
+  <button class="top-btn accent" id="burstBtn">Supernova</button>
+  <button class="top-btn" id="export4k">Export 4K</button>
+</div>
+
+<button class="lang-toggle" id="langBtn" title="Switch Language / 切换语言">EN</button>
+
+<button id="panelToggle" title="Parameters">+</button>
+
+<div id="sidePanel" class="hidden">
+  <label><span id="labelParticles">Particles</span> <span id="countVal">5000</span></label>
+  <input type="range" id="count" min="500" max="12000" value="5000" step="100">
+  <label><span id="labelGravity">Gravity</span> <span id="gravityVal">1.0</span></label>
+  <input type="range" id="gravity" min="0.1" max="3" value="1" step="0.1">
+  <label><span id="labelTrail">Trail</span> <span id="trailVal">0.15</span></label>
+  <input type="range" id="trail" min="0.02" max="0.5" value="0.15" step="0.01">
+  <label><span id="labelSpeed">Speed</span> <span id="speedVal">1.0</span></label>
+  <input type="range" id="speed" min="0.2" max="3" value="1" step="0.1">
+  <label><span id="labelSize">Size</span> <span id="sizeVal">1.5</span></label>
+  <input type="range" id="size" min="0.5" max="4" value="1.5" step="0.1">
+</div>
+
+<div id="hud">
+  <span id="fpsDisp">60</span> <span id="hudFps">FPS</span> &nbsp;·&nbsp; <span id="particleCountDisp">5000</span> <span id="hudParticles">Particles</span> &nbsp;·&nbsp; <span id="hudBrand">Orange Fireworks</span>
+</div>
+<div id="hint"><span id="hintText">Move mouse for gravity &nbsp;·&nbsp; Click for supernova &nbsp;·&nbsp; Right-click to repel &nbsp;·&nbsp; Space for burst</span></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+  var cursorEl=document.getElementById('cursor');
+  var flash=document.getElementById('flash');
+  var toast=document.getElementById('toast');
+  var hint=document.getElementById('hint');
+  var sidePanel=document.getElementById('sidePanel');
+  var W,H;
+  var particles=[];
+  var mouse={x:-9999,y:-9999,down:false,button:0};
+  var params={targetCount:5000,gravity:1.0,trail:0.15,speed:1.0,size:1.5};
+
+  // Intro block — auto-removes after animation
+  setTimeout(function(){var ib=document.getElementById('intro-block');if(ib)ib.remove();},1600);
+
+  // Orange-only color generator
+  function randomOrangeColor(){
+    // Range of orange hues: warm red-orange through amber to golden
+    var h=10+Math.random()*35;     // 10-45: red-orange to gold
+    var s=80+Math.random()*20;     // 80-100: rich saturation
+    var l=40+Math.random()*40;     // 40-80: from deep warm to bright
+    return{h:h,s:s,l:l};
+  }
+
+  function hslToRgb(h,s,l){
+    s/=100;l/=100;
+    var a=s*Math.min(l,1-l);
+    var f=function(n){var k=(n+h/30)%12;return l-a*Math.max(-1,Math.min(k-3,9-k,1));};
+    return{r:Math.round(f(0)*255),g:Math.round(f(8)*255),b:Math.round(f(4)*255)};
+  }
+
+  function Particle(){
+    this.reset(true);
+  }
+
+  Particle.prototype.reset=function(initial){
+    if(initial){
+      this.x=Math.random()*W;this.y=Math.random()*H;
+      this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;
+    }else{
+      var edge=Math.floor(Math.random()*4);
+      if(edge===0){this.x=-20;this.y=Math.random()*H;}
+      else if(edge===1){this.x=W+20;this.y=Math.random()*H;}
+      else if(edge===2){this.x=Math.random()*W;this.y=-20;}
+      else{this.x=Math.random()*W;this.y=H+20;}
+      this.vx=(Math.random()-0.5)*0.4;this.vy=(Math.random()-0.5)*0.4;
+    }
+    var color=randomOrangeColor();
+    this.hue=color.h;this.sat=color.s;this.light=color.l;
+    this.alpha=0.5+Math.random()*0.5;
+    this.size=0.5+Math.random()*1.5;
+  };
+
+  Particle.prototype.update=function(){
+    var dx=mouse.x-this.x,dy=mouse.y-this.y;
+    var dist=Math.sqrt(dx*dx+dy*dy)+1;
+    var forceDir=mouse.button===2?-1:1;
+    var force=(params.gravity*800*forceDir)/(dist*dist+100);
+    this.vx+=(dx/dist)*force*params.speed;
+    this.vy+=(dy/dist)*force*params.speed;
+    this.vx*=0.998;this.vy*=0.998;
+    var spd=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
+    var maxSpd=6*params.speed;
+    if(spd>maxSpd){this.vx=(this.vx/spd)*maxSpd;this.vy=(this.vy/spd)*maxSpd;}
+    this.x+=this.vx;this.y+=this.vy;
+    if(this.x<-30)this.x=W+30;if(this.x>W+30)this.x=-30;
+    if(this.y<-30)this.y=H+30;if(this.y>H+30)this.y=-30;
+  };
+
+  Particle.prototype.draw=function(ctx){
+    var rgb=hslToRgb(this.hue,this.sat,this.light);
+    var sz=this.size*params.size;
+    ctx.beginPath();ctx.arc(this.x,this.y,sz,0,Math.PI*2);
+    ctx.fillStyle='rgba('+rgb.r+','+rgb.g+','+rgb.b+','+this.alpha+')';
+    ctx.fill();
+  };
+
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+
+  function supernova(cx,cy){
+    var burstCount=Math.min(params.targetCount,particles.length);
+    for(var i=0;i<burstCount;i++){
+      var p=particles[i];p.x=cx;p.y=cy;
+      var angle=(Math.PI*2*i)/burstCount+(Math.random()-0.5)*0.3;
+      var force=3+Math.random()*12;
+      p.vx=Math.cos(angle)*force;p.vy=Math.sin(angle)*force;
+      var color=randomOrangeColor();
+      p.hue=color.h;p.sat=color.s;p.light=color.l;p.alpha=1;
+    }
+    flash.classList.add('active');setTimeout(function(){flash.classList.remove('active');},150);
+    showToast(t('toastSupernova'));
+  }
+
+  function syncParticles(){
+    while(particles.length<params.targetCount)particles.push(new Particle());
+    while(particles.length>params.targetCount)particles.pop();
+  }
+
+  var lastTime=performance.now(),frameCount=0,fpsDisplay=60;
+
+  function render(time){
+    frameCount++;
+    if(time-lastTime>=1000){
+      fpsDisplay=Math.round(frameCount/((time-lastTime)/1000));
+      frameCount=0;lastTime=time;
+      document.getElementById('fpsDisp').textContent=fpsDisplay;
+      document.getElementById('particleCountDisp').textContent=particles.length;
+    }
+    ctx.fillStyle='rgba(10,10,10,'+params.trail+')';
+    ctx.fillRect(0,0,W,H);
+    for(var i=0;i<particles.length;i++){particles[i].update();particles[i].draw(ctx);}
+    if(mouse.x>0&&mouse.y>0){
+      var grad=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,60);
+      grad.addColorStop(0,mouse.button===2?'rgba(255,85,0,0.2)':'rgba(255,255,255,0.12)');
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grad;ctx.beginPath();ctx.arc(mouse.x,mouse.y,60,0,Math.PI*2);ctx.fill();
+    }
+    requestAnimationFrame(render);
+  }
+
+  // Custom Cursor
+  document.addEventListener('mousemove',function(e){cursorEl.style.left=e.clientX+'px';cursorEl.style.top=e.clientY+'px';});
+  document.addEventListener('mousedown',function(e){cursorEl.classList.add('click');if(e.button===2)cursorEl.classList.add('repel');});
+  document.addEventListener('mouseup',function(){cursorEl.classList.remove('click','repel');});
+  document.querySelectorAll('button,.top-btn,#panelToggle').forEach(function(el){
+    el.addEventListener('mouseenter',function(){cursorEl.classList.add('hover');});
+    el.addEventListener('mouseleave',function(){cursorEl.classList.remove('hover');});
+  });
+
+  // Right-click
+  window.addEventListener('contextmenu',function(e){e.preventDefault();cursorEl.classList.add('repel');});
+  window.addEventListener('mouseup',function(){cursorEl.classList.remove('repel');});
+
+  // Intro block auto-removed above
+
+  // Toast
+  function showToast(msg){
+    toast.textContent=msg;toast.classList.add('show');
+    setTimeout(function(){toast.classList.remove('show');},2000);
+  }
+
+  // Panel toggle
+  document.getElementById('panelToggle').addEventListener('click',function(){sidePanel.classList.toggle('hidden');});
+
+  // Canvas events
+  canvas.addEventListener('mousemove',function(e){mouse.x=e.clientX;mouse.y=e.clientY;});
+  canvas.addEventListener('mouseleave',function(){mouse.x=-9999;mouse.y=-9999;});
+  canvas.addEventListener('mousedown',function(e){
+    mouse.down=true;mouse.button=e.button;
+    if(e.button===0)supernova(e.clientX,e.clientY);
+    e.preventDefault();
+  });
+  canvas.addEventListener('mouseup',function(){mouse.down=false;mouse.button=-1;});
+  canvas.addEventListener('contextmenu',function(e){e.preventDefault();});
+  canvas.addEventListener('touchmove',function(e){
+    e.preventDefault();mouse.x=e.touches[0].clientX;mouse.y=e.touches[0].clientY;
+  },{passive:false});
+  canvas.addEventListener('touchend',function(){mouse.x=-9999;mouse.y=-9999;});
+  canvas.addEventListener('touchstart',function(e){
+    e.preventDefault();mouse.x=e.touches[0].clientX;mouse.y=e.touches[0].clientY;
+    supernova(mouse.x,mouse.y);
+  },{passive:false});
+
+  // Burst button
+  document.getElementById('burstBtn').addEventListener('click',function(){
+    supernova(W/2+Math.random()*200-100,H/2+Math.random()*200-100);
+  });
+
+  // Sliders
+  function bind(id,param,valId){
+    var s=document.getElementById(id);
+    s.addEventListener('input',function(){
+      params[param]=parseFloat(s.value);
+      document.getElementById(valId).textContent=s.value;
+      if(param==='targetCount')syncParticles();
+    });
+  }
+  bind('count','targetCount','countVal');
+  bind('gravity','gravity','gravityVal');
+  bind('trail','trail','trailVal');
+  bind('speed','speed','speedVal');
+  bind('size','size','sizeVal');
+
+  // Export 4K
+  document.getElementById('export4k').addEventListener('click',function(){
+    var exportCanvas=document.createElement('canvas');
+    exportCanvas.width=3840;exportCanvas.height=2160;
+    var ectx=exportCanvas.getContext('2d');
+    ectx.fillStyle='#0a0a0a';ectx.fillRect(0,0,3840,2160);
+    var sx=3840/W,sy=2160/H;
+    for(var i=0;i<particles.length;i++){
+      var p=particles[i];
+      var rgb=hslToRgb(p.hue,p.sat,p.light);
+      var sz=p.size*params.size*Math.min(sx,sy);
+      ectx.beginPath();ectx.arc(p.x*sx,p.y*sy,sz,0,Math.PI*2);
+      ectx.fillStyle='rgba('+rgb.r+','+rgb.g+','+rgb.b+','+p.alpha+')';ectx.fill();
+    }
+    var link=document.createElement('a');
+    link.download='orange-fireworks-4k.png';link.href=exportCanvas.toDataURL('image/png');link.click();
+    showToast(t('toast4k'));
+  });
+
+  // Keyboard
+  document.addEventListener('keydown',function(e){
+    if(e.key===' '){e.preventDefault();supernova(W/2+Math.random()*200-100,H/2+Math.random()*200-100);}
+    if(e.key==='e'||e.key==='E')document.getElementById('export4k').click();
+  });
+
+  // Hide hint
+  setTimeout(function(){hint.style.opacity='0';setTimeout(function(){hint.remove();},1500);},8000);
+
+  resize();
+  for(var i=0;i<params.targetCount;i++)particles.push(new Particle());
+  requestAnimationFrame(render);
+
+  // ── i18n ──
+  var DICT = {
+    en: {
+      pageTitle: 'Particle Galaxy — Orange Fireworks',
+      burstBtn: 'Supernova',
+      export4k: 'Export 4K',
+      panelToggleTitle: 'Parameters',
+      labelParticles: 'Particles',
+      labelGravity: 'Gravity',
+      labelTrail: 'Trail',
+      labelSpeed: 'Speed',
+      labelSize: 'Size',
+      hudFps: 'FPS',
+      hudParticles: 'Particles',
+      hudBrand: 'Orange Fireworks',
+      hint: 'Move mouse for gravity  ·  Click for supernova  ·  Right-click to repel  ·  Space for burst',
+      toastSupernova: '[ Supernova! ]',
+      toast4k: '[ 4K Exported ]',
+      langLabel: 'ZH'
+    },
+    zh: {
+      pageTitle: '粒子银河 — 橙色烟花',
+      burstBtn: '超新星',
+      export4k: '导出 4K',
+      panelToggleTitle: '参数',
+      labelParticles: '粒子数',
+      labelGravity: '引力',
+      labelTrail: '拖尾',
+      labelSpeed: '速度',
+      labelSize: '大小',
+      hudFps: '帧率',
+      hudParticles: '粒子',
+      hudBrand: '橙色烟花',
+      hint: '移动鼠标吸引粒子  ·  点击 = 超新星  ·  空格 = 爆发  ·  右键 = 排斥  ·  E 导出',
+      toastSupernova: '[ 超新星！ ]',
+      toast4k: '[ 已导出 4K ]',
+      langLabel: 'EN'
+    }
+  };
+
+  var _lang = localStorage.getItem('lang') || 'en';
+
+  function t(key) {
+    return (DICT[_lang] && DICT[_lang][key]) || (DICT.en[key]) || key;
+  }
+
+  function applyLang() {
+    document.title = t('pageTitle');
+
+    var burstBtn = document.getElementById('burstBtn');
+    if (burstBtn) burstBtn.textContent = t('burstBtn');
+
+    var export4k = document.getElementById('export4k');
+    if (export4k) export4k.textContent = t('export4k');
+
+    var panelToggle = document.getElementById('panelToggle');
+    if (panelToggle) panelToggle.title = t('panelToggleTitle');
+
+    var langBtn = document.getElementById('langBtn');
+    if (langBtn) {
+      langBtn.textContent = t('langLabel');
+      langBtn.title = _lang === 'zh' ? 'Switch to English' : '切换到中文';
+    }
+
+    // Panel labels — all slider control labels + HUD
+    var ids = ['labelParticles','labelGravity','labelTrail','labelSpeed','labelSize',
+               'hudFps','hudParticles','hudBrand','hintText'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el) {
+        if (ids[i] === 'hintText') {
+          el.innerHTML = t('hint');
+        } else {
+          el.textContent = t(ids[i]);
+        }
+      }
+    }
+  }
+
+  applyLang();
+
+  document.getElementById('langBtn').addEventListener('click', function() {
+    _lang = _lang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', _lang);
+    applyLang();
+  });
+})();
+</script>
+</body>
+</html>

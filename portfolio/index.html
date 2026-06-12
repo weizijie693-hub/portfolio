@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio — Creative Developer</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --text: #e0e0d8;
+    --text-dim: #909090;
+    --text-faint: #555;
+    --accent: #ff5500;
+    --accent-soft: rgba(255,85,0,0.12);
+    --border: #e0e0d8;
+    --line: #2a2a2a;
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-lg: 20px;
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    cursor: none;
+  }
+
+  /* ── Custom Cursor ── */
+  #cursor {
+    position: fixed; width: 12px; height: 12px; border: 1.5px solid var(--accent);
+    border-radius: 50%; pointer-events: none; z-index: 10000;
+    transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s;
+    transform: translate(-50%, -50%); mix-blend-mode: difference;
+  }
+  #cursor.hover { width: 32px; height: 32px; background: rgba(255,85,0,0.15); border-color: #fff; }
+  #cursor.click { width: 8px; height: 8px; background: var(--accent); border-color: var(--accent); }
+
+  /* ── Scanline overlay ── */
+  #scanlines {
+    position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+    opacity: 0.03;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.3) 2px,
+      rgba(0,0,0,0.3) 4px
+    );
+  }
+
+  /* ── Mouse spotlight ── */
+  #spotlight {
+    position: fixed; pointer-events: none; z-index: 2;
+    width: 700px; height: 700px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,85,0,0.045) 0%, transparent 65%);
+    transform: translate(-50%, -50%); opacity: 0;
+    transition: opacity 0.8s;
+  }
+  #spotlight.active { opacity: 1; }
+
+  /* ── Background particles canvas ── */
+  #particleCanvas {
+    position: fixed; top: 0; left: 0; z-index: 0; pointer-events: none;
+  }
+
+  /* ── Grain texture overlay ── */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+  }
+
+  /* ── Scroll progress bar ── */
+  .scroll-progress {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: var(--accent); z-index: 1000;
+    width: 0%; transition: width 0.1s linear;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 36px;
+    background: rgba(13,13,13,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: all 0.4s var(--ease);
+  }
+  header.scrolled {
+    border-bottom-color: var(--line);
+    padding: 14px 36px;
+  }
+  .logo {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+    color: var(--text); text-decoration: none;
+    transition: transform 0.3s var(--ease-spring);
+  }
+  .logo:hover { transform: scale(1.05); }
+  .lang-toggle {
+    background: none; border: 1px solid var(--line); color: var(--text-dim);
+    font-family: inherit; font-size: 11px; font-weight: 600;
+    padding: 6px 14px; border-radius: 50px; cursor: pointer;
+    letter-spacing: 1px; transition: all 0.3s;
+  }
+  .lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-dim); text-decoration: none;
+    transition: color 0.3s; position: relative;
+    padding: 4px 0;
+  }
+  .nav-links a::after {
+    content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px;
+    background: var(--accent); border-radius: 2px;
+    transition: width 0.3s var(--ease-out);
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links a:hover::after { width: 100%; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 180px 32px 100px;
+    max-width: 800px; margin: 0 auto;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 6vw, 56px); font-weight: 700;
+    letter-spacing: -1.5px; line-height: 1.1;
+    margin-bottom: 24px;
+    animation: heroIn 0.9s var(--ease-out) both;
+  }
+  .hero h1 .accent { color: var(--accent); }
+  @keyframes heroIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero p {
+    font-size: 17px; color: var(--text-dim);
+    max-width: 560px; margin: 0 auto 36px;
+    letter-spacing: 0.2px; line-height: 1.75;
+    animation: heroIn 0.9s var(--ease-out) 0.15s both;
+  }
+  .hero-links {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    animation: heroIn 0.9s var(--ease-out) 0.3s both;
+  }
+  .hero-links a {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 12px 28px;
+    border: 2px solid var(--border); color: var(--text);
+    text-decoration: none; transition: all 0.35s var(--ease-out);
+    border-radius: 50px;
+  }
+  .hero-links a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(255,255,255,0.06);
+  }
+  .hero-links a.fill { background: var(--border); color: var(--bg); }
+  .hero-links a.fill:hover { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 28px rgba(255,85,0,0.25); }
+  .hero-links a:not(.fill):hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Floating accent shapes ── */
+  .hero-shape {
+    position: absolute; border-radius: 50%; pointer-events: none; z-index: 0;
+    opacity: 0.06; filter: blur(60px);
+  }
+  .hero-shape.s1 { width: 300px; height: 300px; background: var(--accent); top: 10%; left: -5%; animation: float 12s ease-in-out infinite; }
+  .hero-shape.s2 { width: 200px; height: 200px; background: #ffffff; bottom: 20%; right: -3%; animation: float 16s ease-in-out 3s infinite; }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(30px, -20px) scale(1.1); }
+    66%      { transform: translate(-20px, 15px) scale(0.9); }
+  }
+
+  /* ── Magnetic buttons ── */
+  .magnetic {
+    transition: transform 0.45s var(--ease-spring), box-shadow 0.35s var(--ease-out);
+    will-change: transform;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    border: none; border-top: 2px solid var(--line);
+    max-width: 80px; margin: 0 auto;
+    border-radius: 2px;
+  }
+
+  /* ── Section header ── */
+  .section-header {
+    padding: 100px 32px 48px; text-align: center;
+    max-width: 800px; margin: 0 auto;
+  }
+  .section-header .count {
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 12px;
+    display: inline-block;
+    padding: 4px 14px; border-radius: 50px;
+    background: var(--accent-soft);
+  }
+  .section-header h2 {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+  .section-header .sub {
+    font-size: 14px; color: var(--text-dim); letter-spacing: 0.3px;
+    line-height: 1.7;
+  }
+
+  /* ── Project Grid ── */
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+    padding: 0 36px 100px;
+    max-width: 1600px; margin: 0 auto;
+  }
+  .project-card {
+    background: var(--bg);
+    border-radius: var(--radius);
+    transition: box-shadow 0.5s var(--ease-out), border-color 0.5s var(--ease-out);
+    position: relative;
+    border: 1px solid transparent;
+    animation: cardIn 0.7s var(--ease-out) both;
+    transform-style: preserve-3d;
+    perspective: 1200px;
+  }
+  .project-card.revealed {
+    animation: cardIn 0.7s var(--ease-out) both;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .project-card:hover {
+    box-shadow: 0 20px 50px rgba(255,85,0,0.08);
+    border-color: var(--line);
+  }
+  .project-card.tilting {
+    transition: transform 0.15s ease-out, box-shadow 0.5s var(--ease-out), border-color 0.5s var(--ease-out);
+  }
+
+  /* Card shine overlay */
+  .card-shine {
+    position: absolute; inset: 0; border-radius: var(--radius);
+    pointer-events: none; z-index: 1;
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .project-card:hover .card-shine {
+    opacity: 1;
+  }
+
+  .project-card a {
+    display: block; text-decoration: none; color: inherit;
+    padding: 20px;
+  }
+
+  /* Image container */
+  .img-wrap {
+    position: relative; width: 100%; overflow: hidden;
+    background: #1a1a1a;
+    margin-bottom: 18px;
+    border-radius: var(--radius-sm);
+  }
+  .img-wrap .placeholder { width: 100%; display: block; border-radius: var(--radius-sm); }
+  .img-wrap .full-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0;
+    transition: opacity 0.7s ease, transform 0.7s var(--ease-out);
+    border-radius: var(--radius-sm);
+  }
+  .img-wrap .full-img.loaded { opacity: 1; }
+  .project-card:hover .img-wrap .full-img.loaded {
+    transform: scale(1.04);
+  }
+
+  .img-wrap .blur-preview {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; filter: blur(24px); transform: scale(1.12);
+    transition: opacity 0.6s ease;
+    border-radius: var(--radius-sm);
+  }
+  .img-wrap .blur-preview.fade-out { opacity: 0; }
+
+  .img-wrap .hover-arrow {
+    position: absolute; top: 14px; right: 14px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--text);
+    opacity: 0; transform: translateX(-6px);
+    transition: all 0.35s var(--ease-out);
+    pointer-events: none;
+  }
+  .project-card:hover .hover-arrow {
+    opacity: 1; transform: translateX(0);
+  }
+
+  .project-title {
+    font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
+    margin-bottom: 4px; transition: color 0.3s;
+  }
+  .project-card:hover .project-title { color: var(--accent); }
+  .project-credit {
+    font-size: 12px; color: var(--text-dim); letter-spacing: 0.4px;
+  }
+  .project-tag {
+    display: inline-block; font-size: 9px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent); margin-top: 10px;
+    padding: 3px 10px; border-radius: 50px;
+    background: var(--accent-soft);
+  }
+
+  /* ── Forms Section ── */
+  .forms-section {
+    padding: 80px 36px 120px;
+    max-width: 860px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px;
+  }
+  .form-block h3 {
+    font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .form-block p {
+    font-size: 13px; color: var(--text-dim); margin-bottom: 24px;
+    letter-spacing: 0.2px; line-height: 1.7;
+  }
+  .form-block input, .form-block textarea {
+    width: 100%; padding: 14px 18px; margin-bottom: 14px;
+    background: transparent; border: 2px solid var(--line);
+    font-size: 13px; font-family: inherit; color: var(--text);
+    outline: none; transition: all 0.35s var(--ease-out);
+    letter-spacing: 0.3px; border-radius: var(--radius-sm);
+  }
+  .form-block input:focus, .form-block textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(255,85,0,0.06);
+    transform: translateY(-1px);
+  }
+  .form-block textarea { resize: vertical; min-height: 110px; }
+  .form-block button {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 14px 32px;
+    background: var(--border); color: var(--bg); border: none;
+    cursor: pointer; transition: all 0.35s var(--ease-out);
+    font-family: inherit; border-radius: 50px;
+  }
+  .form-block button:hover {
+    background: var(--accent); color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(255,85,0,0.25);
+  }
+  .form-block button:active { transform: scale(0.97); }
+
+  /* Toast notification */
+  .toast {
+    position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--border); color: var(--bg);
+    padding: 14px 28px; border-radius: 50px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+    z-index: 1000; transition: transform 0.5s var(--ease-spring);
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── Cursor glow on cards ── */
+  .project-card .glow {
+    position: absolute; inset: 0; border-radius: var(--radius);
+    opacity: 0; transition: opacity 0.4s;
+    pointer-events: none; z-index: 0;
+  }
+  .project-card:hover .glow {
+    opacity: 1;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 960px) {
+    .project-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  }
+  @media (max-width: 768px) {
+    .hero { padding: 140px 20px 70px; }
+    .hero h1 { font-size: 28px; }
+    .project-grid { grid-template-columns: 1fr; padding: 0 20px 80px; gap: 12px; }
+    .forms-section { grid-template-columns: 1fr; gap: 48px; padding: 60px 20px 80px; }
+    header { padding: 14px 20px; }
+    .nav-links { gap: 16px; }
+    .section-header { padding: 70px 20px 36px; }
+    .hero-shape { display: none; }
+  }
+
+  /* ── Touch device fallback ── */
+  @media (hover: none) and (pointer: coarse) {
+    body { cursor: auto; }
+    #cursor, #spotlight, #scanlines, #particleCanvas { display: none; }
+    .project-card:hover { transform: none; }
+    .project-card.tilting { transition: none; }
+    .magnetic { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+<div id="spotlight"></div>
+<div id="scanlines"></div>
+<div id="cursor"></div>
+
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<div class="hero-shape s1"></div>
+<div class="hero-shape s2"></div>
+
+<header id="header">
+  <a href="#" class="logo" data-i18n="logo">Portfolio</a>
+  <nav>
+    <ul class="nav-links">
+      <li><a href="#work" data-i18n="nav.work">Work</a></li>
+      <li><a href="#newsletter" data-i18n="nav.newsletter">Newsletter</a></li>
+      <li><a href="#contact" data-i18n="nav.contact">Contact</a></li>
+    </ul>
+  </nav>
+  <button class="lang-toggle" id="langToggle" data-i18n-title="lang.switch" data-i18n="lang.btn">中</button>
+</header>
+
+<section class="hero" style="position:relative; z-index:1;">
+  <h1><span data-i18n="hero.line1">Creative Developer</span><br><span class="accent">&amp;</span> <span data-i18n="hero.line2">Visual Explorer</span></h1>
+  <p data-i18n="hero.desc">
+    Independent creative developer crafting interactive experiences,
+    generative visuals, and digital tools. Exploring the boundaries
+    between code, art, and design.
+  </p>
+  <div class="hero-links">
+    <a href="#work" class="fill" data-i18n="hero.cta1">View Projects</a>
+    <a href="#contact" data-i18n="hero.cta2">Get in Touch</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section id="work">
+  <div class="section-header">
+    <div class="count" data-i18n="work.count">6 Selected Projects</div>
+    <h2 data-i18n="work.title">Work Index</h2>
+    <p class="sub" data-i18n="work.sub">A comprehensive archive of creative and technical projects — generative art, image processing, real-time interaction, and digital tools.</p>
+  </div>
+
+  <div class="project-grid" id="projectGrid"></div>
+</section>
+
+<hr class="divider">
+
+<section class="forms-section" id="newsletter">
+  <div class="form-block">
+    <h3 data-i18n="newsletter.title">Newsletter</h3>
+    <p data-i18n="newsletter.desc">Monthly updates on new projects, creative experiments, and insights into the intersection of code and visual art.</p>
+    <form id="newsletterForm">
+      <input type="email" data-i18n-placeholder="newsletter.placeholder" placeholder="Your email address" required>
+      <button type="submit" data-i18n="newsletter.btn">Subscribe</button>
+    </form>
+  </div>
+
+  <div class="form-block" id="contact">
+    <h3 data-i18n="contact.title">Contact</h3>
+    <p data-i18n="contact.desc">Interested in collaboration? Have a project in mind? Fill out the form below with as many details as possible.</p>
+    <form id="contactForm">
+      <input type="text" data-i18n-placeholder="contact.name" placeholder="Your name" required>
+      <input type="email" data-i18n-placeholder="contact.email" placeholder="Your email address" required>
+      <textarea data-i18n-placeholder="contact.msg" placeholder="Tell me about your project — what are you building, and what do you need?" required></textarea>
+      <button type="submit" data-i18n="contact.btn">Send Message</button>
+    </form>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── i18n Translation Engine ──
+const DICT = {
+  en: {
+    'page.title':'Portfolio — Creative Developer',
+    'logo':'Portfolio',
+    'lang.btn':'中',
+    'lang.switch':'Switch Language',
+    'nav.work':'Work','nav.newsletter':'Newsletter','nav.contact':'Contact',
+    'hero.line1':'Creative Developer','hero.line2':'Visual Explorer',
+    'hero.desc':'Independent creative developer crafting interactive experiences, generative visuals, and digital tools. Exploring the boundaries between code, art, and design.',
+    'hero.cta1':'View Projects','hero.cta2':'Get in Touch',
+    'work.count':'6 Selected Projects','work.title':'Work Index',
+    'work.sub':'A comprehensive archive of creative and technical projects — generative art, image processing, real-time interaction, and digital tools.',
+    'newsletter.title':'Newsletter','newsletter.desc':'Monthly updates on new projects, creative experiments, and insights into the intersection of code and visual art.',
+    'newsletter.placeholder':'Your email address','newsletter.btn':'Subscribe',
+    'contact.title':'Contact','contact.desc':'Interested in collaboration? Have a project in mind? Fill out the form below with as many details as possible.',
+    'contact.name':'Your name','contact.email':'Your email address',
+    'contact.msg':'Tell me about your project — what are you building, and what do you need?',
+    'contact.btn':'Send Message',
+    'footer':'© 2026 · Built with plain HTML/CSS/JS · No frameworks, no bloat',
+    'toast.subscribed':'✓ Subscribed! Welcome aboard.',
+    'toast.sent':'✓ Message sent! I\'ll get back to you within 24h.',
+    'project.particle.title':'Particle Galaxy','project.particle.credit':'12,000 Particles · Gravity Simulation · 4K Export','project.particle.tag':'Generative Art',
+    'project.glitch.title':'Glitch Studio','project.glitch.credit':'RGB Shift · Pixel Sort · Scanlines · 6 Distortion Passes','project.glitch.tag':'Image Processing',
+    'project.ascii.title':'ASCII Cam','project.ascii.credit':'Real-time Video · Terminal Aesthetics · 3 Render Modes','project.ascii.tag':'Real-time',
+    'project.graffiti.title':'Light Graffiti','project.graffiti.credit':'6 Brushes · Canvas Painting · Particle Trails','project.graffiti.tag':'Creative Tool',
+    'project.color.title':'Color Detective','project.color.credit':'K-means++ Clustering · 5 Color Harmonies · CSS Export','project.color.tag':'Utility',
+    'project.mdbook.title':'Markdown Magic Book','project.mdbook.credit':'Live Preview · Presentation Mode · Auto-save · Export','project.mdbook.tag':'Editor',
+    'coming.soon':'Coming soon',
+  },
+  zh: {
+    'page.title':'Portfolio — 创意开发者',
+    'logo':'作品集',
+    'lang.btn':'EN',
+    'lang.switch':'切换语言',
+    'nav.work':'作品','nav.newsletter':'订阅','nav.contact':'联系',
+    'hero.line1':'创意开发者','hero.line2':'视觉探索者',
+    'hero.desc':'独立创意开发者，专注于打造交互体验、生成式视觉与数字工具。在代码、艺术与设计的交叉地带持续探索。',
+    'hero.cta1':'浏览项目','hero.cta2':'联系我',
+    'work.count':'6 个精选项目','work.title':'作品索引',
+    'work.sub':'创意与技术项目档案 —— 涵盖生成艺术、图像处理、实时交互与数字工具。',
+    'newsletter.title':'邮件订阅','newsletter.desc':'每月更新：新项目发布、创意实验分享，以及代码与视觉艺术交汇处的思考。',
+    'newsletter.placeholder':'你的邮箱地址','newsletter.btn':'订阅',
+    'contact.title':'联系我','contact.desc':'有合作意向？有项目想法？请填写下方表单，尽量详细地描述需求。',
+    'contact.name':'你的名字','contact.email':'你的邮箱地址',
+    'contact.msg':'告诉我你想做什么项目，需要什么样的帮助？',
+    'contact.btn':'发送消息',
+    'footer':'© 2026 · 纯 HTML/CSS/JS 构建 · 零框架，零冗余',
+    'toast.subscribed':'✓ 订阅成功！欢迎加入。',
+    'toast.sent':'✓ 消息已发送！我会在 24 小时内回复。',
+    'project.particle.title':'粒子银河','project.particle.credit':'12,000 粒子 · 重力模拟 · 4K 导出','project.particle.tag':'生成艺术',
+    'project.glitch.title':'Glitch 工作室','project.glitch.credit':'RGB 偏移 · 像素排序 · 扫描线 · 6 种特效','project.glitch.tag':'图像处理',
+    'project.ascii.title':'ASCII 字符相机','project.ascii.credit':'实时视频 · 终端美学 · 3 种渲染模式','project.ascii.tag':'实时视频',
+    'project.graffiti.title':'光影涂鸦','project.graffiti.credit':'6 支画笔 · 画布绘画 · 粒子轨迹','project.graffiti.tag':'创意工具',
+    'project.color.title':'配色侦探','project.color.credit':'K-means++ 聚类 · 5 种配色方案 · CSS 导出','project.color.tag':'实用工具',
+    'project.mdbook.title':'Markdown 魔法书','project.mdbook.credit':'实时预览 · 演示模式 · 自动保存 · 导出','project.mdbook.tag':'编辑器',
+    'coming.soon':'即将推出',
+  }
+};
+
+let currentLang = localStorage.getItem('lang') || 'en';
+function t(key){ return (DICT[currentLang]||DICT.en)[key] || key; }
+function applyLang(){
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+  // Text content
+  document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent = t(el.dataset.i18n); });
+  // Placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){ el.placeholder = t(el.dataset.i18nPlaceholder); });
+  // Title attributes
+  document.querySelectorAll('[data-i18n-title]').forEach(function(el){ el.title = t(el.dataset.i18nTitle); });
+  // Page title
+  document.title = t('page.title');
+  // Project cards — re-render
+  renderProjects();
+  // Toggle button
+  var btn = document.getElementById('langToggle');
+  if(btn) btn.textContent = t('lang.btn');
+  localStorage.setItem('lang', currentLang);
+}
+document.getElementById('langToggle').addEventListener('click', function(){
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  applyLang();
+});
+
+// ── Toast helper ──
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2800);
+}
+
+// ── Project Data ──
+var projectKeys = ['particle','glitch','ascii','graffiti','color','mdbook'];
+var projectUrls = [
+  '../project/particle-galaxy/index.html',
+  '../project/glitch-studio/index.html',
+  '../project/ascii-cam/index.html',
+  '../project/light-graffiti/index.html',
+  '../project/color-detective/index.html',
+  '../project/md-magic-book/index.html'
+];
+
+// ── Themed SVG Preview generators ──
+function generatePlaceholder(key) {
+  var svg = '';
+  switch (key) {
+    case 'particle':
+      // Dark space with orange particle field + gravity wells
+      var stars = '';
+      for (var s=0; s<50; s++) { stars += '<circle cx="'+(15+Math.random()*70)+'%" cy="'+(5+Math.random()*55)+'%" r="'+(0.3+Math.random()*1.2)+'" fill="#ff5500" opacity="'+(0.2+Math.random()*0.7)+'"/>'; }
+      svg = '<rect width="100%" height="100%" rx="2" fill="#0a0a0a"/>' +
+        '<circle cx="30%" cy="30%" r="12" fill="none" stroke="rgba(255,85,0,0.15)" stroke-width="0.5"/><circle cx="30%" cy="30%" r="24" fill="none" stroke="rgba(255,85,0,0.06)" stroke-width="0.3"/>' +
+        '<circle cx="68%" cy="55%" r="10" fill="none" stroke="rgba(255,85,0,0.12)" stroke-width="0.5"/><circle cx="68%" cy="55%" r="20" fill="none" stroke="rgba(255,85,0,0.05)" stroke-width="0.3"/>' +
+        stars;
+      break;
+    case 'glitch':
+      // RGB shift / glitch strips
+      svg = '<defs><clipPath id="gc"><rect width="100%" height="100%" rx="2"/></clipPath></defs>' +
+        '<rect width="100%" height="100%" rx="2" fill="#0d0d0d"/>' +
+        '<g clip-path="url(#gc)">' +
+        '<rect x="-3%" y="0" width="35%" height="100%" fill="#ff0000" opacity="0.3"/><rect x="30%" y="0" width="40%" height="100%" fill="#00ff00" opacity="0.15"/><rect x="65%" y="0" width="38%" height="100%" fill="#0000ff" opacity="0.2"/>' +
+        '<rect x="10%" y="18%" width="80%" height="2" fill="#ff5500" opacity="0.6"/><rect x="5%" y="19%" width="90%" height="1" fill="#00ffff" opacity="0.4"/>' +
+        '<rect x="12%" y="42%" width="76%" height="3" fill="#ff0055" opacity="0.5"/><rect x="8%" y="44%" width="84%" height="1" fill="#ffff00" opacity="0.3"/>' +
+        '<rect x="15%" y="68%" width="70%" height="2" fill="#ff5500" opacity="0.5"/><rect x="20%" y="69.5%" width="60%" height="0.8" fill="#00ffcc" opacity="0.3"/>' +
+        '</g>';
+      break;
+    case 'ascii':
+      // Green terminal / matrix-style
+      var chars = '';
+      for (var c=0; c<60; c++) { chars += '<text x="'+(3+Math.random()*94)+'%" y="'+(8+Math.random()*82)+'%" font-family="monospace" font-size="'+(1.5+Math.random()*3)+'" fill="#0f0" opacity="'+(0.12+Math.random()*0.5)+'">' + String.fromCharCode(33+Math.floor(Math.random()*90)) + '</text>'; }
+      svg = '<rect width="100%" height="100%" rx="2" fill="#0a0a0a"/>' +
+        '<rect x="5%" y="12%" width="90%" height="50%" rx="1" fill="#020" opacity="0.3" stroke="#0f0" stroke-width="0.5" stroke-opacity="0.2"/>' +
+        chars;
+      break;
+    case 'graffiti':
+      // Colorful brush strokes on dark canvas
+      svg = '<rect width="100%" height="100%" rx="2" fill="#0d0d0d"/>' +
+        '<path d="M10,35 Q25,10 40,30 T65,20 T85,35" stroke="#ff5500" stroke-width="2.5" fill="none" opacity="0.7" stroke-linecap="round"/>' +
+        '<path d="M8,42 Q30,55 55,38 T80,48" stroke="#00ccff" stroke-width="2" fill="none" opacity="0.6" stroke-linecap="round"/>' +
+        '<path d="M15,28 Q35,45 60,25 T90,32" stroke="#ffcc00" stroke-width="1.8" fill="none" opacity="0.5" stroke-linecap="round"/>' +
+        '<circle cx="25%" cy="30%" r="3" fill="#ff0055" opacity="0.5"/><circle cx="55%" cy="22%" r="2.5" fill="#00ff88" opacity="0.45"/>' +
+        '<circle cx="75%" cy="38%" r="4" fill="#ff5500" opacity="0.35"/><circle cx="42%" cy="50%" r="2" fill="#ffcc00" opacity="0.4"/>';
+      break;
+    case 'color':
+      // Color swatches / palette gradient
+      var swatches = '';
+      var paletteColors = ['#ff5500','#e63946','#457b9d','#2a9d8f','#e9c46a','#f4a261','#264653','#8ecae6'];
+      var swW = 92/paletteColors.length;
+      for (var sw=0; sw<paletteColors.length; sw++) {
+        swatches += '<rect x="'+(4+sw*swW)+'%" y="18%" width="'+swW+'%" height="28%" rx="1" fill="'+paletteColors[sw]+'" opacity="0.85"/>' +
+          '<text x="'+(4+sw*swW+swW/2)+'%" y="54%" text-anchor="middle" font-family="monospace" font-size="1.6" fill="#fff" opacity="0.55">'+paletteColors[sw]+'</text>';
+      }
+      svg = '<rect width="100%" height="100%" rx="2" fill="#0d0d0d"/>' +
+        swatches +
+        '<circle cx="50%" cy="75%" r="10" fill="none" stroke="rgba(255,85,0,0.3)" stroke-width="1"/>';
+      break;
+    case 'mdbook':
+      // Code editor with markdown preview
+      svg = '<rect width="100%" height="100%" rx="2" fill="#0d0d0d"/>' +
+        // Editor panel
+        '<rect x="4%" y="8%" width="44%" height="70%" rx="1.5" fill="#111" stroke="#2a2a2a" stroke-width="0.8"/>' +
+        '<line x1="10%" y1="16%" x2="42%" y2="16%" stroke="#ff5500" stroke-width="1" opacity="0.5"/>' +
+        '<line x1="10%" y1="22%" x2="35%" y2="22%" stroke="#e0e0d8" stroke-width="0.8" opacity="0.3"/>' +
+        '<line x1="10%" y1="28%" x2="38%" y2="28%" stroke="#e0e0d8" stroke-width="0.8" opacity="0.2"/>' +
+        '<line x1="10%" y1="34%" x2="30%" y2="34%" stroke="#e0e0d8" stroke-width="0.8" opacity="0.15"/>' +
+        '<line x1="10%" y1="40%" x2="36%" y2="40%" stroke="#e0e0d8" stroke-width="0.8" opacity="0.25"/>' +
+        // Preview panel
+        '<rect x="52%" y="8%" width="44%" height="70%" rx="1.5" fill="#111" stroke="#2a2a2a" stroke-width="0.8"/>' +
+        '<rect x="56%" y="14%" width="36%" height="6" rx="0.5" fill="#e0e0d8" opacity="0.15"/>' +
+        '<rect x="56%" y="24%" width="28%" height="2" rx="0.3" fill="#909090" opacity="0.2"/>' +
+        '<rect x="56%" y="29%" width="32%" height="2" rx="0.3" fill="#909090" opacity="0.15"/>' +
+        '<rect x="56%" y="34%" width="20%" height="2" rx="0.3" fill="#909090" opacity="0.1"/>' +
+        '<rect x="56%" y="42%" width="36%" height="2" rx="0.3" fill="#909090" opacity="0.2"/>' +
+        '<rect x="56%" y="47%" width="24%" height="2" rx="0.3" fill="#909090" opacity="0.12"/>' +
+        // Code highlight
+        '<rect x="10%" y="52%" width="28%" height="1.5" rx="0.3" fill="#00ff88" opacity="0.4"/>' +
+        '<rect x="10%" y="58%" width="22%" height="1.5" rx="0.3" fill="#ff5500" opacity="0.35"/>';
+      break;
+  }
+  return '<svg class="placeholder" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">' + svg + '</svg>';
+}
+
+// ── Render Project Cards ──
+function renderProjects(){
+  var grid = document.getElementById('projectGrid');
+  grid.innerHTML = '';
+  projectKeys.forEach(function(key, idx){
+    var card = document.createElement('div');
+    card.className = 'project-card';
+    card.style.animationDelay = (idx * 0.06) + 's';
+    var placeholderSvg = generatePlaceholder(key);
+    var url = projectUrls[idx];
+    var title = t('project.'+key+'.title');
+    var credit = t('project.'+key+'.credit');
+    var tag = t('project.'+key+'.tag');
+
+    var link = document.createElement('a');
+    link.href = url; link.target = '_blank'; link.rel = 'noopener';
+    link.innerHTML =
+      '<div class="img-wrap">' +
+        placeholderSvg +
+        '<div class="hover-arrow">↗</div>' +
+      '</div>' +
+      '<div class="project-title">' + title + '</div>' +
+      '<div class="project-credit">' + credit + '</div>' +
+      '<span class="project-tag">' + tag + '</span>';
+    card.appendChild(link);
+    grid.appendChild(card);
+  });
+
+  // Re-observe new cards
+  document.querySelectorAll('.project-card').forEach(function(card){
+    card.style.animationPlayState = 'paused';
+    observer.observe(card);
+  });
+  setupLazyImages();
+  bindAllEffects();
+  setTimeout(function(){
+    document.querySelectorAll('.project-card').forEach(function(c){ c.style.animationPlayState = 'running'; });
+  }, 200);
+}
+
+// ── Intersection Observer — reveal cards on scroll ──
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+// Forms section reveal
+const formsObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.querySelectorAll('.form-block').forEach((fb, i) => {
+        fb.style.animation = `heroIn 0.7s var(--ease-out) ${i*0.15}s both`;
+      });
+      formsObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+const formsSection = document.querySelector('.forms-section');
+if (formsSection) {
+  document.querySelectorAll('.form-block').forEach(fb => { fb.style.opacity = '0'; });
+  formsObserver.observe(formsSection);
+}
+
+// ── Blur-up lazy loading ──
+function setupLazyImages() {
+  document.querySelectorAll('.full-img[data-src]').forEach(img => {
+    const src = img.getAttribute('data-src');
+    if (!src) return;
+    const preview = img.parentElement.querySelector('.blur-preview');
+    if (!preview) { img.src = src; img.classList.add('loaded'); return; }
+
+    const tempImg = new Image();
+    tempImg.crossOrigin = 'anonymous';
+    tempImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxDim = 40, ratio = tempImg.width / tempImg.height;
+      if (ratio > 1) { canvas.width = maxDim; canvas.height = Math.round(maxDim / ratio); }
+      else { canvas.height = maxDim; canvas.width = Math.round(maxDim * ratio); }
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(tempImg, 0, 0, canvas.width, canvas.height);
+      preview.src = canvas.toDataURL('image/jpeg', 0.08);
+      preview.style.display = 'block';
+      const fullImg = new Image();
+      fullImg.onload = () => { img.src = src; img.classList.add('loaded'); preview.classList.add('fade-out'); setTimeout(() => { preview.style.display = 'none'; }, 600); };
+      fullImg.src = src;
+    };
+    tempImg.onerror = () => { img.src = src; img.classList.add('loaded'); };
+    tempImg.src = src;
+  });
+}
+
+// ── Scroll progress bar ──
+window.addEventListener('scroll', () => {
+  const header = document.getElementById('header');
+  header.classList.toggle('scrolled', window.scrollY > 50);
+
+  const scrollH = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = scrollH > 0 ? (window.scrollY / scrollH) * 100 : 0;
+  document.getElementById('scrollProgress').style.width = pct + '%';
+});
+
+// ── Background Particles ──
+(function(){
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+
+  function resize(){
+    w = canvas.width  = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = [];
+  const COUNT = 30;
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 1.2 + 0.4,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      hue: Math.random() > 0.6 ? 25 : 0, // warm orange or white
+      alpha: Math.random() * 0.35 + 0.08,
+      pulse: Math.random() * Math.PI * 2
+    });
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < COUNT; i++) {
+      const p = particles[i];
+      p.pulse += 0.008;
+      const alpha = p.alpha + Math.sin(p.pulse) * 0.1;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap around edges
+      if (p.x < -10) p.x = w + 10;
+      if (p.x > w + 10) p.x = -10;
+      if (p.y < -10) p.y = h + 10;
+      if (p.y > h + 10) p.y = -10;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      if (p.hue === 25) {
+        ctx.fillStyle = `rgba(255,85,0,${alpha})`;
+      } else {
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      }
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Custom Cursor + Spotlight ──
+const cursorEl = document.getElementById('cursor');
+const spotlight = document.getElementById('spotlight');
+let mouseX = -1000, mouseY = -1000;
+
+document.addEventListener('mousemove', function(e) {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursorEl.style.left = e.clientX + 'px';
+  cursorEl.style.top = e.clientY + 'px';
+  spotlight.style.left = e.clientX + 'px';
+  spotlight.style.top = e.clientY + 'px';
+  spotlight.classList.add('active');
+});
+document.addEventListener('mouseleave', function() {
+  spotlight.classList.remove('active');
+});
+document.addEventListener('mousedown', function() { cursorEl.classList.add('click'); });
+document.addEventListener('mouseup',   function() { cursorEl.classList.remove('click'); });
+document.querySelectorAll('a,button,input,textarea,[role="button"]').forEach(function(el) {
+  el.addEventListener('mouseenter', function() { cursorEl.classList.add('hover'); });
+  el.addEventListener('mouseleave', function() { cursorEl.classList.remove('hover'); });
+});
+
+// ── Card 3D Tilt ──
+function setupCardTilt(card) {
+  // Add shine element
+  const shine = document.createElement('div');
+  shine.className = 'card-shine';
+  card.appendChild(shine);
+
+  card.addEventListener('mousemove', function(e) {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rx = ((y - cy) / cy) * -12; // rotateX
+    const ry = ((x - cx) / cx) * 8;   // rotateY
+
+    card.classList.add('tilting');
+    card.style.transform = `perspective(1200px) translateY(-6px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+
+    // Dynamic shine
+    const shineX = (x / rect.width) * 100;
+    const shineY = (y / rect.height) * 100;
+    shine.style.background = `radial-gradient(circle at ${shineX}% ${shineY}%, rgba(255,255,255,0.06) 0%, transparent 55%)`;
+  });
+
+  card.addEventListener('mouseleave', function() {
+    card.classList.remove('tilting');
+    card.style.transform = 'perspective(1200px) translateY(0) rotateX(0) rotateY(0)';
+    shine.style.background = '';
+  });
+}
+
+// ── Magnetic Buttons ──
+function setupMagnetic(el) {
+  el.classList.add('magnetic');
+
+  el.addEventListener('mousemove', function(e) {
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const dx = (x - cx) * 0.3;
+    const dy = (y - cy) * 0.3;
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+
+  el.addEventListener('mouseleave', function() {
+    el.style.transform = 'translate(0, 0)';
+  });
+}
+
+// ── Apply effects after each render ──
+function bindAllEffects() {
+  document.querySelectorAll('.project-card').forEach(setupCardTilt);
+  document.querySelectorAll('.hero-links a, .form-block button, .lang-toggle, .logo').forEach(setupMagnetic);
+  // Re-bind cursor hover for newly rendered elements
+  document.querySelectorAll('a,button,input,textarea,[role="button"]').forEach(function(el) {
+    // Avoid duplicate listeners — simple approach: set a flag
+    if (!el.dataset.cursorBound) {
+      el.dataset.cursorBound = '1';
+      el.addEventListener('mouseenter', function() { cursorEl.classList.add('hover'); });
+      el.addEventListener('mouseleave', function() { cursorEl.classList.remove('hover'); });
+    }
+  });
+}
+
+// ── Form submissions ──
+document.getElementById('newsletterForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  showToast(t('toast.subscribed'));
+  this.reset();
+});
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  showToast(t('toast.sent'));
+  this.reset();
+});
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
+  applyLang();
+  bindAllEffects();
+});
+</script>
+</body>
+</html>
