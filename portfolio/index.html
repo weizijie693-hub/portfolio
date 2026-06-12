@@ -71,6 +71,53 @@
     position: fixed; top: 0; left: 0; z-index: 0; pointer-events: none;
   }
 
+  <!-- ── Ambient wireframe canvas ── -->
+  #wireframeCanvas {
+    position: fixed; top: 0; left: 0; z-index: 0; pointer-events: none;
+    opacity: 0.04;
+  }
+
+  /* ── Page transition overlay ── */
+  #page-transition {
+    position: fixed; inset: 0; z-index: 10001; pointer-events: none;
+    background: var(--accent);
+    transform: scale(0); border-radius: 50%;
+    transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  #page-transition.out { transform: scale(0); }
+  #page-transition.in { transform: scale(3); border-radius: 0; }
+
+  /* ── Card hover preview animations ── */
+  .project-card .img-wrap .placeholder { transition: opacity 0.3s; }
+  .project-card:hover .img-wrap .placeholder { opacity: 0.85; }
+
+  /* Particle: stars twinkle */
+  .card-particle:hover .img-wrap .placeholder circle { animation: twinkle 1.5s ease-in-out infinite; }
+  .card-particle:hover .img-wrap .placeholder circle:nth-child(odd) { animation-delay: 0.7s; }
+  @keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:0.8} }
+
+  /* Glitch: RGB strips shift */
+  .card-glitch:hover .img-wrap .placeholder rect:nth-child(n+2):nth-child(-n+4) { animation: rgbShift 0.8s steps(3) infinite; }
+  @keyframes rgbShift { 0%{transform:translateX(0)} 33%{transform:translateX(3px)} 66%{transform:translateX(-3px)} 100%{transform:translateX(0)} }
+
+  /* ASCII: characters flicker */
+  .card-ascii:hover .img-wrap .placeholder text { animation: flicker 0.6s steps(2) infinite; }
+  .card-ascii:hover .img-wrap .placeholder text:nth-child(odd) { animation-delay: 0.2s; }
+  @keyframes flicker { 0%,100%{opacity:0.15} 50%{opacity:0.6} }
+
+  /* Graffiti: brush stroke draw-in */
+  .card-graffiti:hover .img-wrap .placeholder path { animation: drawIn 2s ease-in-out infinite; stroke-dasharray: 200; stroke-dashoffset: 200; }
+  @keyframes drawIn { 0%{stroke-dashoffset:200} 50%{stroke-dashoffset:0} 100%{stroke-dashoffset:200} }
+
+  /* Color: swatches pulse */
+  .card-color:hover .img-wrap .placeholder rect:not(:first-child) { animation: swatchPulse 2s ease-in-out infinite; }
+  .card-color:hover .img-wrap .placeholder rect:nth-child(2n) { animation-delay: 0.5s; }
+  @keyframes swatchPulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
+
+  /* MD Book: cursor blink */
+  .card-mdbook:hover .img-wrap .placeholder line { animation: cursorBlink 0.8s steps(2) infinite; }
+  @keyframes cursorBlink { 0%,100%{opacity:0.5} 50%{opacity:0} }
+
   /* ── Grain texture overlay ── */
   body::before {
     content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
@@ -414,9 +461,11 @@
 </head>
 <body>
 
+<canvas id="wireframeCanvas"></canvas>
 <canvas id="particleCanvas"></canvas>
 <div id="spotlight"></div>
 <div id="scanlines"></div>
+<div id="page-transition"></div>
 <div id="cursor"></div>
 
 <div class="scroll-progress" id="scrollProgress"></div>
@@ -677,7 +726,7 @@ function renderProjects(){
   grid.innerHTML = '';
   projectKeys.forEach(function(key, idx){
     var card = document.createElement('div');
-    card.className = 'project-card';
+    card.className = 'project-card card-' + key;
     card.style.animationDelay = (idx * 0.06) + 's';
     var placeholderSvg = generatePlaceholder(key);
     var url = projectUrls[idx];
@@ -834,6 +883,85 @@ window.addEventListener('scroll', () => {
   draw();
 })();
 
+// ── Ambient Wireframe ──
+(function(){
+  const canvas = document.getElementById('wireframeCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+
+  function resize() {
+    w = canvas.width  = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Icosahedron vertices (normalized)
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const verts = [
+    [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+    [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+    [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
+  ];
+  // Normalize
+  for (let i = 0; i < verts.length; i++) {
+    const len = Math.sqrt(verts[i][0]**2 + verts[i][1]**2 + verts[i][2]**2);
+    verts[i] = [verts[i][0]/len, verts[i][1]/len, verts[i][2]/len];
+  }
+  // Edges: pairs of vertex indices
+  const edges = [];
+  for (let i = 0; i < verts.length; i++) {
+    for (let j = i+1; j < verts.length; j++) {
+      const dx = verts[i][0]-verts[j][0], dy = verts[i][1]-verts[j][1], dz = verts[i][2]-verts[j][2];
+      const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if (dist < 1.3) edges.push([i, j]);
+    }
+  }
+
+  let angle = 0;
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    angle += 0.003;
+    const scale = Math.min(w, h) * 0.5;
+    const cx = w / 2, cy = h / 2;
+
+    // Rotate around Y then X
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    const cosB = Math.cos(angle * 0.7), sinB = Math.sin(angle * 0.7);
+
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.lineWidth = 0.5;
+
+    for (let e = 0; e < edges.length; e++) {
+      const a = verts[edges[e][0]], b = verts[edges[e][1]];
+
+      // Rotate Y
+      const axY = a[0]*cosA - a[2]*sinA, azY = a[0]*sinA + a[2]*cosA;
+      const bxY = b[0]*cosA - b[2]*sinA, bzY = b[0]*sinA + b[2]*cosA;
+
+      // Rotate X
+      const ay = a[1]*cosB - azY*sinB, az = a[1]*sinB + azY*cosB;
+      const by = b[1]*cosB - bzY*sinB, bz = b[1]*sinB + bzY*cosB;
+
+      // Perspective
+      const d = 3;
+      const axS = cx + (axY / (az + d)) * scale, ayS = cy + (ay / (az + d)) * scale;
+      const bxS = cx + (bxY / (bz + d)) * scale, byS = cy + (by / (bz + d)) * scale;
+
+      // Depth fade
+      const depthAlpha = 0.25 + 0.75 * ((az + bz) / 2 + 1) / 2;
+      ctx.strokeStyle = `rgba(255,255,255,${depthAlpha.toFixed(2)})`;
+
+      ctx.beginPath();
+      ctx.moveTo(axS, ayS);
+      ctx.lineTo(bxS, byS);
+      ctx.stroke();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
 // ── Custom Cursor + Spotlight ──
 const cursorEl = document.getElementById('cursor');
 const spotlight = document.getElementById('spotlight');
@@ -924,6 +1052,32 @@ function bindAllEffects() {
     }
   });
 }
+
+// ── Page Transition ──
+(function(){
+  var overlay = document.getElementById('page-transition');
+
+  // Entry animation: start covered, reveal
+  overlay.classList.add('in');
+  setTimeout(function(){
+    overlay.classList.remove('in');
+    overlay.classList.add('out');
+    setTimeout(function(){ overlay.classList.remove('out'); }, 600);
+  }, 80);
+
+  // Intercept outbound clicks for exit animation
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href || href === '#' || href.startsWith('#') || link.target === '_blank') return;
+    // Same-origin only
+    if (link.hostname && link.hostname !== window.location.hostname) return;
+    e.preventDefault();
+    overlay.classList.add('in');
+    setTimeout(function(){ window.location = href; }, 500);
+  });
+})();
 
 // ── Form submissions ──
 document.getElementById('newsletterForm').addEventListener('submit', function(e) {

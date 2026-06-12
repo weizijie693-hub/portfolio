@@ -159,10 +159,21 @@ canvas{display:block;position:fixed;top:0;left:0;}
   #sidePanel{width:160px;padding:20px 14px;}
   #topBar .top-btn{padding:0 14px;font-size:9px;}
 }
+
+/* Page transition */
+#page-transition {
+  position: fixed; inset: 0; z-index: 10001; pointer-events: none;
+  background: var(--accent);
+  transform: scale(0); border-radius: 50%;
+  transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
+}
+#page-transition.in { transform: scale(3); border-radius: 0; }
+#page-transition.out { transform: scale(0); }
 </style>
 </head>
 <body>
 
+<div id="page-transition"></div>
 <canvas id="c"></canvas>
 <div id="noise"></div>
 <div id="cursor"></div>
@@ -502,6 +513,19 @@ canvas{display:block;position:fixed;top:0;left:0;}
     localStorage.setItem('lang', _lang);
     applyLang();
   });
+})();
+</script>
+
+<!-- Page transition entry -->
+<script>
+(function(){
+  var ov = document.getElementById('page-transition');
+  ov.classList.add('in');
+  setTimeout(function(){
+    ov.classList.remove('in');
+    ov.classList.add('out');
+    setTimeout(function(){ ov.classList.remove('out'); }, 600);
+  }, 80);
 })();
 </script>
 </body>
