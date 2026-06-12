@@ -77,16 +77,6 @@
     opacity: 0.04;
   }
 
-  /* ── Page transition overlay ── */
-  #page-transition {
-    position: fixed; inset: 0; z-index: 10001; pointer-events: none;
-    background: var(--accent);
-    transform: scale(0); border-radius: 50%;
-    transition: transform 0.55s cubic-bezier(0.77, 0, 0.175, 1);
-  }
-  #page-transition.out { transform: scale(0); }
-  #page-transition.in { transform: scale(3); border-radius: 0; }
-
   /* ── Card hover preview animations ── */
   .project-card .img-wrap .placeholder { transition: opacity 0.3s; }
   .project-card:hover .img-wrap .placeholder { opacity: 0.85; }
@@ -465,7 +455,6 @@
 <canvas id="particleCanvas"></canvas>
 <div id="spotlight"></div>
 <div id="scanlines"></div>
-<div id="page-transition"></div>
 <div id="cursor"></div>
 
 <div class="scroll-progress" id="scrollProgress"></div>
@@ -922,8 +911,8 @@ window.addEventListener('scroll', () => {
   function draw() {
     ctx.clearRect(0, 0, w, h);
     angle += 0.003;
-    const scale = Math.min(w, h) * 0.5;
-    const cx = w / 2, cy = h / 2;
+    const scale = Math.min(w, h) * 0.22;
+    const cx = w * 0.82, cy = h * 0.78;
 
     // Rotate around Y then X
     const cosA = Math.cos(angle), sinA = Math.sin(angle);
@@ -1052,32 +1041,6 @@ function bindAllEffects() {
     }
   });
 }
-
-// ── Page Transition ──
-(function(){
-  var overlay = document.getElementById('page-transition');
-
-  // Entry animation: start covered, reveal
-  overlay.classList.add('in');
-  setTimeout(function(){
-    overlay.classList.remove('in');
-    overlay.classList.add('out');
-    setTimeout(function(){ overlay.classList.remove('out'); }, 600);
-  }, 80);
-
-  // Intercept outbound clicks for exit animation
-  document.addEventListener('click', function(e) {
-    var link = e.target.closest('a');
-    if (!link) return;
-    var href = link.getAttribute('href');
-    if (!href || href === '#' || href.startsWith('#') || link.target === '_blank') return;
-    // Same-origin only
-    if (link.hostname && link.hostname !== window.location.hostname) return;
-    e.preventDefault();
-    overlay.classList.add('in');
-    setTimeout(function(){ window.location = href; }, 500);
-  });
-})();
 
 // ── Form submissions ──
 document.getElementById('newsletterForm').addEventListener('submit', function(e) {
