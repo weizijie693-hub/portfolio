@@ -55,7 +55,11 @@ class UI {
     `).join('')
 
     this.dominantStrip.querySelectorAll('.color-block').forEach(el => {
-      el.addEventListener('click', () => this.copy(el.dataset.hex))
+      el.addEventListener('click', () => {
+        el.classList.add('copied')
+        setTimeout(() => el.classList.remove('copied'), 200)
+        this.copy(el.dataset.hex)
+      })
     })
 
     this.dominantActions.classList.remove('hidden')
@@ -94,6 +98,8 @@ class UI {
     this.schemes.querySelectorAll('.scheme-swatch').forEach(el => {
       el.addEventListener('click', e => {
         e.stopPropagation()
+        el.classList.add('copied')
+        setTimeout(() => el.classList.remove('copied'), 600)
         this.copy(el.dataset.hex)
       })
       el.addEventListener('contextmenu', e => {
