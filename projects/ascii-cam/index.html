@@ -63,6 +63,7 @@ nav{
   padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-start;
   mix-blend-mode:difference;
 }
+nav .back-link{color:rgba(255,255,255,0.5);text-decoration:none;font-size:11px;font-weight:500;letter-spacing:0.1em;margin-right:16px;transition:color 0.3s}nav .back-link:hover{color:var(--accent)}
 nav .logo{
   font-size:13px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#fff;
   background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:var(--radius);
@@ -271,6 +272,7 @@ nav .lang-toggle:hover{border-color:var(--accent);color:var(--accent);}
 </div>
 
 <nav>
+  <a href="../../index.html" class="back-link" title="Back to Portfolio">← Portfolio</a>
   <div class="logo">ASCII<span>Cam</span></div>
   <div class="links">
     <a href="#" class="active" data-mode="green" onclick="switchMode('green')">Green</a>
