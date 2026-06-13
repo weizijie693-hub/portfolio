@@ -147,17 +147,6 @@
   .project-card.tilting { transition: transform 0.15s ease-out, box-shadow 0.5s var(--ease-out), border-color 0.5s var(--ease-out); }
   .card-shine { position: absolute; inset: 0; border-radius: var(--radius); pointer-events: none; z-index: 1; opacity: 0; transition: opacity 0.4s; }
   .project-card:hover .card-shine { opacity: 1; }
-
-  /* ── Flowing border on card hover ── */
-  .project-card::before {
-    content: ''; position: absolute; inset: -2px; z-index: -1;
-    border-radius: calc(var(--radius) + 2px);
-    background: conic-gradient(from 0deg, transparent, var(--accent), transparent, var(--accent), transparent);
-    opacity: 0; transition: opacity 0.4s;
-    animation: borderRotate 3s linear infinite; animation-play-state: paused;
-  }
-  .project-card:hover::before { opacity: 1; animation-play-state: running; }
-  @keyframes borderRotate { to { transform: rotate(360deg); } }
   .project-card a { display: block; text-decoration: none; color: inherit; padding: 20px; }
   .img-wrap { position: relative; width: 100%; overflow: hidden; background: #1a1a1a; margin-bottom: 18px; border-radius: var(--radius-sm); }
   .img-wrap .placeholder { width: 100%; display: block; border-radius: var(--radius-sm); }
