@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    Main — Entry
    ═══════════════════════════════════════════════════════════ */
 
@@ -36,6 +36,10 @@
 
         ui.renderDominant(dominant)
         ui.renderSchemes(schemes)
+        ui.renderTemperature(dominant)
+        ui.renderAverage(dominant)
+        ui.renderBrightness(dominant)
+        ui.renderDetails(dominant)
         ui.showResults()
 
         ui.hideLoader()
@@ -51,6 +55,7 @@
     const colors = ui.getColors()
     if (type === 'hex') ui.copy(Exporter.allHexes(colors), _('toastCopy'))
     if (type === 'css') ui.copy(Exporter.toCSSVariables(colors), _('toastCopy'))
+    if (type === 'json') ui.copy(Exporter.toJSON(colors), _('toastCopy'))
   })
 
   document.getElementById('btnExportPalette')?.addEventListener('click', () => {
@@ -70,12 +75,10 @@
     }
   })
 
-  // Preview close — just close preview, don't open file picker
+  // Preview close — show upload area, don't reload demo
   document.getElementById('btnClosePreview')?.addEventListener('click', () => {
     uploader.reset()
     ui.clear()
-    // Reload a fresh demo
-    setTimeout(loadDemo, 400)
   })
 
   // ─── Cycle demo on re-upload when no colors loaded yet ───
@@ -90,10 +93,25 @@
     const schemes = ui.getSchemes()
     if (dominant.length) {
       ui.renderDominant(dominant)
+      ui.renderTemperature(dominant)
+      ui.renderAverage(dominant)
+      ui.renderBrightness(dominant)
+      ui.renderDetails(dominant)
     }
     if (schemes.length) {
       ui.renderSchemes(schemes)
     }
+  })
+
+  // ─── Info buttons — show toast with longer duration ───
+  document.querySelectorAll('.info-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var key = btn.dataset.info + 'Info'
+      var text = _(key)
+      if (text && text !== key) {
+        ui.showToast(text, 5000)
+      }
+    })
   })
 
   // ─── Demo images ─── (delayed to let intro block finish)

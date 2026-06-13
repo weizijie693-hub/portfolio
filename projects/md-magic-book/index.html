@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -43,7 +43,7 @@
     <!-- Hero -->
     <div class="md-hero">
       <p class="md-eyebrow" data-i18n="heroEyebrow">Live Markdown Editor</p>
-      <h1 data-i18n="heroTitle">Magic<br><em>Book</em></h1>
+      <h1 data-i18n-html="heroTitle">Magic<br><em>Book</em></h1>
       <p class="md-sub" data-i18n="heroSub">Write, preview, and present Markdown with real-time rendering and cinematic slide decks</p>
     </div>
     <div class="main">
@@ -177,6 +177,11 @@
     document.querySelectorAll('[data-i18n]').forEach(function(el) {
       var key = el.getAttribute('data-i18n');
       el.textContent = t(key);
+    });
+    /* data-i18n-html */
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n-html');
+      el.innerHTML = t(key);
     });
     /* data-i18n-placeholder */
     document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {

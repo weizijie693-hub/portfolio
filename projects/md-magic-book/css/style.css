@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    Markdown Magic Book — Dark-Tech + Orange
    ═══════════════════════════════════════════ */
 
@@ -107,7 +107,8 @@ body::before {
 .nav-brand {
   font-size: 12px; font-weight: 700; letter-spacing: 2px;
   background: #1a1a1a; padding: 8px 18px; border-radius: 8px;
-  text-transform: uppercase;
+  text-transform: uppercase; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 0.35em; flex-shrink: 0;
 }
 .nav-brand span:first-child { color: #fff; }
 .nav-brand span:last-child { color: var(--accent); }
@@ -126,12 +127,12 @@ body::before {
 
 /* ─── Lang Toggle ─── */
 .lang-toggle {
-  background: none; border: 1px solid #555; color: #888;
-  font-family: var(--sans); font-size: 10px; letter-spacing: 1px;
-  padding: 5px 12px; border-radius: 6px; cursor: none;
-  transition: all 0.2s; margin-left: 4px;
+  background: none; border: 1px solid #2a2a2a; color: #909090;
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  padding: 6px 14px; border-radius: 50px; cursor: none;
+  letter-spacing: 1px; transition: all 0.3s; margin-left: 4px;
 }
-.lang-toggle:hover { border-color: #fff; color: #fff; }
+.lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Smooth sliding underline for nav-link */
 .nav-link::before {

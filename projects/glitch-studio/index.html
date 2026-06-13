@@ -1,10 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Glitch Studio — Datamosh Engine</title>
-<script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -55,7 +54,7 @@ nav .logo{
   background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:var(--radius);
   backdrop-filter:blur(10px);
 }
-nav .logo span{color:var(--accent);}
+nav .logo span:first-child{color:#fff;} nav .logo span:last-child{color:var(--accent);}
 nav .links{display:flex;gap:4px;}
 nav .links a{
   color:rgba(255,255,255,0.6);text-decoration:none;
@@ -66,9 +65,9 @@ nav .links a{
 nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);}
 
 .lang-toggle {
-  background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6);
-  font-family: inherit; font-size: 10px; font-weight: 600;
-  padding: 6px 12px; border-radius: 50px; cursor: pointer;
+  background: none; border: 1px solid #2a2a2a; color: #909090;
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  padding: 6px 14px; border-radius: 50px; cursor: pointer;
   letter-spacing: 1px; transition: all 0.3s; margin-left: 8px;
 }
 .lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
@@ -88,7 +87,7 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
   letter-spacing:-0.02em;margin-bottom:20px;
   opacity:0;transform:translateY(20px);animation:revealUp 0.8s 0.5s ease forwards;
 }
-#hero h1 em{font-style:italic;font-weight:100;}
+#hero h1 em{font-style:italic;font-weight:100;color:var(--accent);}
 #hero .subtitle{
   font-size:16px;color:var(--text-muted);line-height:1.6;max-width:500px;margin:0 auto;
   opacity:0;transform:translateY(20px);animation:revealUp 0.8s 0.7s ease forwards;
@@ -185,6 +184,13 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
 #sidebar .btn:hover{border-color:var(--accent);color:var(--accent);}
 #sidebar .btn.accent{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600;}
 #sidebar .btn.accent:hover{background:#ff6a1a;}
+.history-gallery{display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;}
+.history-thumb{width:44px;height:36px;border:1px solid var(--border);border-radius:6px;cursor:pointer;overflow:hidden;flex-shrink:0;transition:border-color 0.2s;background:#000;position:relative;}
+.history-thumb:hover{border-color:var(--accent);}
+.history-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.history-thumb .history-del{position:absolute;top:1px;right:2px;font-size:8px;color:#f44;opacity:0;transition:opacity 0.2s;line-height:1;pointer-events:none;}
+.history-thumb:hover .history-del{opacity:1;}
+
 
 #info{
   padding:80px 40px;border-top:1px solid var(--border);
@@ -283,8 +289,11 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
 
     <button class="btn accent" id="randomBtn">Random Glitch</button>
     <button class="btn" id="exportPngBtn">Export PNG</button>
-    <button class="btn" id="exportGifBtn">Export Frames</button>
+    
+    <button class="btn" id="copyClipboardBtn">Copy Image</button>
     <button class="btn" id="resetBtn">Reset All</button>
+    <div class="sec-label" style="margin-top:16px">History</div>
+    <div class="history-gallery" id="historyGallery"></div>
   </div>
 </section>
 
@@ -300,7 +309,7 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
   </div>
   <div class="col">
     <div class="label">Export</div>
-    <p>Single-frame PNG export captures the current glitch state. Frame sequence export generates 10 variation frames with animated shift jitter for GIF composition.</p>
+    <p>Single-frame PNG export captures the current glitch state at full resolution. Download your corrupted artwork instantly.</p>
   </div>
 </section>
 
@@ -479,23 +488,24 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
     var result=applyEffects(srcData,effects);
 
     if(mode==='compare'){
-      // COMPARE MODE: original on left, glitched on right
+      // COMPARE MODE: composite original + glitch on a single canvas
       var w=result.width,h=result.height;
       canvas.width=w;canvas.height=h;
-      origCanvas.width=w;origCanvas.height=h;
+      canvas.style.clipPath='none';
+      origCanvas.style.display='none';
 
-      // Show original on origCanvas
-      origCtx.putImageData(originalImage,0,0);
-
-      // Show glitched on output canvas
-      ctx.putImageData(result,0,0);
-
-      // Both canvases visible, slider clips the glitched canvas from left
-      origCanvas.style.display='block';
-      var splitX=(comparePos/100)*w;
-      // Clip the glitched output to show only the right portion
-      canvas.style.clipPath='inset(0 0 0 '+splitX+'px)';
-      origCanvas.style.clipPath='inset(0 '+(w-splitX)+'px 0 0)';
+      // Build composite: original on left, glitched on right
+      var splitX=Math.floor((comparePos/100)*w);
+      var comp=new ImageData(w,h);
+      var sO=originalImage.data, sG=result.data, d=comp.data;
+      for(var y=0;y<h;y++){
+        for(var x=0;x<w;x++){
+          var i=(y*w+x)*4;
+          if(x<splitX){d[i]=sO[i];d[i+1]=sO[i+1];d[i+2]=sO[i+2];d[i+3]=sO[i+3];}
+          else{d[i]=sG[i];d[i+1]=sG[i+1];d[i+2]=sG[i+2];d[i+3]=sG[i+3];}
+        }
+      }
+      ctx.putImageData(comp,0,0);
 
       compareSlider.style.display='block';
       compareSlider.style.left=comparePos+'%';
@@ -612,30 +622,76 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
     var a=document.createElement('a');a.download='glitch.png';a.href=canvas.toDataURL('image/png');a.click();
     showToast(t('toast.exported'));
   });
-  document.getElementById('exportGifBtn').addEventListener('click',function(){
-    if(!originalImage){showToast(t('toast.noimage'));return;}
-    showToast(t('toast.exporting'));
-    var origEff={};for(var k in effects)origEff[k]=effects[k];
-    var gif=new GIF({workers:0,quality:10,width:canvas.width,height:canvas.height,
-      workerScript:'https://unpkg.com/gif.js@0.2.0/dist/gif.worker.js'});
-    for(var i=0;i<10;i++){
-      var srcData=new ImageData(new Uint8ClampedArray(originalImage.data),originalImage.width,originalImage.height);
-      var frameEff={};for(var k in origEff)frameEff[k]=origEff[k];
-      frameEff.rgbShift=Math.max(0,origEff.rgbShift+Math.floor(Math.sin(i*1.2)*8));
-      frameEff.tear=Math.max(0,origEff.tear+Math.floor(Math.random()*5));
-      frameEff.blockShift=Math.max(0,origEff.blockShift+Math.floor(Math.random()*10));
-      var gifCanvas=document.createElement('canvas');
-      gifCanvas.width=canvas.width;gifCanvas.height=canvas.height;
-      gifCanvas.getContext('2d').putImageData(applyEffects(srcData,frameEff),0,0);
-      gif.addFrame(gifCanvas,{delay:150});
-    }
-    gif.on('finished',function(blob){
-      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='glitch.gif';a.click();
-      showToast(t('toast.gifDone'));
+
+  // ── History snapshots ──
+  var historySnaps=[];
+  var MAX_HISTORY=8;
+  function saveSnapshot(){
+    if(!originalImage)return;
+    var snap=document.createElement('canvas');
+    snap.width=canvas.width;snap.height=canvas.height;
+    snap.getContext('2d').drawImage(canvas,0,0);
+    historySnaps.unshift(snap);
+    if(historySnaps.length>MAX_HISTORY)historySnaps.pop();
+    renderHistory();
+  }
+  function renderHistory(){
+    var g=document.getElementById('historyGallery');
+    g.innerHTML='';
+    historySnaps.forEach(function(s,i){
+      var div=document.createElement('div');
+      div.className='history-thumb';
+      div.title='Snapshot '+(i+1)+' — click to restore';
+      var img=document.createElement('img');
+      img.src=s.toDataURL('image/png');
+      img.alt='snap'+(i+1);
+      div.appendChild(img);
+      div.addEventListener('click',function(){
+        var ctx2=canvas.getContext('2d');
+        canvas.width=s.width;canvas.height=s.height;
+        ctx2.drawImage(s,0,0);
+        showToast('[ Snapshot '+(i+1)+' restored ]');
+      });
+      g.appendChild(div);
     });
-    gif.on('error',function(){showToast(t('toast.gifFail'));});
-    gif.render();
+  }
+
+  // ── Copy to Clipboard ──
+  document.getElementById('copyClipboardBtn').addEventListener('click',function(){
+    if(!originalImage){showToast(t('toast.noimage'));return;}
+    canvas.toBlob(function(blob){
+      if(!blob){showToast('[ Copy failed ]');return;}
+      try{
+        var item=new ClipboardItem({'image/png':blob});
+        navigator.clipboard.write([item]).then(function(){
+          showToast('[ Image copied to clipboard ]');
+        }).catch(function(){showToast('[ Clipboard blocked — right-click Save As instead ]')});
+      }catch(e){showToast('[ Clipboard not supported — use Export PNG ]')}
+    },'image/png');
   });
+
+  // ── Auto-save snapshot on slider change ──
+  function updateEffectWithHistory(id){
+    updateEffect(id);
+    clearTimeout(window._snapshotTimer);
+    window._snapshotTimer=setTimeout(saveSnapshot,600);
+  }
+  // Override updateEffect to trigger history
+  var _origUpdateEffect=window.updateEffect;
+  window.updateEffect=function(id){
+    _origUpdateEffect(id);
+    clearTimeout(window._snapshotTimer);
+    window._snapshotTimer=setTimeout(saveSnapshot,600);
+  };
+  // Save snapshot on random & preset
+  var _origApplyPreset=window.applyPreset;
+  window.applyPreset=function(name){
+    _origApplyPreset(name);
+    setTimeout(saveSnapshot,100);
+  };
+  document.getElementById('randomBtn').addEventListener('click',function(){setTimeout(saveSnapshot,100);});
+
+  
 
   // BG Particles
   function spawnBgParticle(){
@@ -673,16 +729,16 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
       'drop.icon':'[ + ]','drop.text':'Drop Image or Click to Upload','drop.hint':'JPG / PNG / WebP',
       'sidebar.presets':'Presets','sidebar.viewmode':'View Mode','sidebar.effects':'Effects',
       'view.single':'Single','view.compare':'Compare',
-      'btn.random':'Random Glitch','btn.export':'Export PNG','btn.frames':'Export Frames','btn.reset':'Reset All',
+      'btn.random':'Random Glitch','btn.export':'Export PNG','btn.copy':'Copy Image','btn.reset':'Reset All','sidebar.history':'History',
       'info.pipeline':'Pipeline','info.pipeline.desc':'6 stackable distortion passes applied sequentially: RGB Shift → Tear → Pixel Sort → Scanlines → Block Shift → Quantize.',
       'info.process':'Process','info.process.desc':'Each effect operates on raw RGBA pixel buffers. The original image data is preserved, allowing non-destructive real-time parameter sweeping.',
-      'info.export':'Export','info.export.desc':'Single-frame PNG export captures the current glitch state. Frame sequence export generates 10 variation frames with animated shift jitter for GIF composition.',
+      'info.export':'Export','info.export.desc':'Single-frame PNG export captures the current glitch state at full resolution. Download your corrupted artwork instantly.',
       'toast.loaded':'[ Image Loaded ]','toast.error':'[ Image Load Error ]',
       'toast.vhs':'[ VHS Preset ]','toast.decay':'[ DECAY Preset ]','toast.cyber':'[ CYBER Preset ]','toast.crt':'[ CRT Preset ]',
       'toast.compare':'[ Compare Mode ]','toast.single':'[ Single View ]',
       'toast.randomized':'[ Randomized ]','toast.reset':'[ All Reset ]',
-      'toast.exported':'[ PNG Exported ]','toast.noimage':'[ No Image ]','toast.exporting':'[ Creating GIF... ]',
-      'toast.gifDone':'[ GIF Exported ]','toast.gifFail':'[ GIF failed — try again ]',
+      'toast.exported':'[ PNG Exported ]','toast.noimage':'[ No Image ]','toast.copied':'[ Image copied to clipboard ]','toast.copyFail':'[ Clipboard blocked ]','toast.snapRestored':'[ Snapshot restored ]',
+      
       'effect.rgb':'RGB Shift','effect.tear':'H-Tear','effect.pixelSort':'Pixel Sort','effect.scanlines':'Scanlines','effect.blockShift':'Block Shift','effect.quantize':'Quantize'
     },
     zh: {
@@ -696,16 +752,16 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
       'drop.icon':'[ + ]','drop.text':'拖放图片或点击上传','drop.hint':'JPG / PNG / WebP',
       'sidebar.presets':'预设','sidebar.viewmode':'查看模式','sidebar.effects':'效果',
       'view.single':'单图','view.compare':'对比',
-      'btn.random':'随机故障','btn.export':'导出 PNG','btn.frames':'导出序列帧','btn.reset':'全部重置',
+      'btn.random':'随机故障','btn.export':'导出 PNG','btn.copy':'复制图片','btn.reset':'全部重置','sidebar.history':'历史记录',
       'info.pipeline':'处理管线','info.pipeline.desc':'6 个可叠加的失真通道按序执行：RGB 偏移 → 水平撕裂 → 像素排序 → 扫描线 → 块位移 → 色彩量化。',
       'info.process':'处理方式','info.process.desc':'每个效果直接操作原始 RGBA 像素缓冲区，保留原始图像数据，支持非破坏性实时参数调节。',
-      'info.export':'导出','info.export.desc':'单帧 PNG 导出捕获当前故障状态。帧序列导出生成 10 张带动态偏移抖动的变体帧，可用于 GIF 合成。',
+      'info.export':'导出','info.export.desc':'单帧 PNG 导出捕获当前故障状态，全分辨率下载你的故障艺术作品。',
       'toast.loaded':'[ 图片已加载 ]','toast.error':'[ 图片加载失败 ]',
       'toast.vhs':'[ VHS 预设 ]','toast.decay':'[ 衰减预设 ]','toast.cyber':'[ 赛博预设 ]','toast.crt':'[ CRT 预设 ]',
       'toast.compare':'[ 对比模式 ]','toast.single':'[ 单图模式 ]',
       'toast.randomized':'[ 已随机化 ]','toast.reset':'[ 已重置 ]',
-      'toast.exported':'[ 已导出 PNG ]','toast.noimage':'[ 未加载图片 ]','toast.exporting':'[ 正在生成 GIF... ]',
-      'toast.gifDone':'[ 已导出 GIF ]','toast.gifFail':'[ GIF 失败 — 请重试 ]',
+      'toast.exported':'[ 已导出 PNG ]','toast.noimage':'[ 未加载图片 ]','toast.copied':'[ 图片已复制到剪贴板 ]','toast.copyFail':'[ 剪贴板被阻止 ]','toast.snapRestored':'[ 快照已恢复 ]',
+      
       'effect.rgb':'RGB 偏移','effect.tear':'水平撕裂','effect.pixelSort':'像素排序','effect.scanlines':'扫描线','effect.blockShift':'块位移','effect.quantize':'色彩量化'
     }
   };
@@ -734,31 +790,30 @@ nav .links a:hover,nav .links a.active{color:#fff;background:rgba(255,85,0,0.2);
     // Action buttons
     var rnd = document.getElementById('randomBtn'); if (rnd) rnd.textContent = t('btn.random');
     var ep = document.getElementById('exportPngBtn'); if (ep) ep.textContent = t('btn.export');
-    var ef = document.getElementById('exportFramesBtn'); if (ef) ef.textContent = t('btn.frames');
+    
     var rst = document.getElementById('resetBtn'); if (rst) rst.textContent = t('btn.reset');
+    var cp = document.getElementById('copyClipboardBtn'); if (cp) cp.textContent = t('btn.copy');
+    // History label
+    var histLabels = document.querySelectorAll('.sec-label');
+    if (histLabels[3]) histLabels[3].textContent = t('sidebar.history');
     // Info section
-    var infoLabels = document.querySelectorAll('.info-grid .label');
+    var infoLabels = document.querySelectorAll('#info .col .label');
     if (infoLabels[0]) infoLabels[0].textContent = t('info.pipeline');
     if (infoLabels[1]) infoLabels[1].textContent = t('info.process');
     if (infoLabels[2]) infoLabels[2].textContent = t('info.export');
-    var infoDescs = document.querySelectorAll('.info-grid p');
+    var infoDescs = document.querySelectorAll('#info .col p');
     if (infoDescs[0]) infoDescs[0].textContent = t('info.pipeline.desc');
     if (infoDescs[1]) infoDescs[1].textContent = t('info.process.desc');
     if (infoDescs[2]) infoDescs[2].textContent = t('info.export.desc');
-    // Effect slider labels (dynamic, update if already rendered)
+    // Effect slider labels
     updateEffectLabels();
   }
 
   function updateEffectLabels() {
-    var labels = document.querySelectorAll('#controls label');
+    var labels = document.querySelectorAll('#fxGroup .fx-row label');
     var keys = ['effect.rgb','effect.tear','effect.pixelSort','effect.scanlines','effect.blockShift','effect.quantize'];
     for (var i = 0; i < Math.min(labels.length, keys.length); i++) {
-      var span = labels[i].querySelector('span');
-      if (span) continue; // has child span, skip
-      var text = labels[i].childNodes[0];
-      if (text && text.nodeType === 3) {
-        labels[i].childNodes[0].textContent = ' ' + t(keys[i]) + ' ';
-      }
+      labels[i].textContent = t(keys[i]);
     }
   }
 

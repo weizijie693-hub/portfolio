@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -70,17 +70,15 @@ canvas{display:block;position:fixed;top:0;left:0;}
 #topBar .top-btn.accent{background:var(--accent);color:#000;font-weight:600;}
 #topBar .top-btn.accent:hover{background:#ff6a1a;color:#000;}
 
-/* Lang toggle — fixed top-right */
+/* Lang toggle — pill shape matching main page */
 .lang-toggle {
-  position: fixed; top: 24px; right: 24px; z-index: 101;
-  background: rgba(17,17,17,0.9); border: 1px solid var(--border);
-  color: var(--text-muted); width: 40px; height: 40px;
-  display: flex; align-items: center; justify-content: center;
+  position: fixed; top: 28px; right: 24px; z-index: 101;
+  background: none; border: 1px solid #2a2a2a; color: #909090;
   font-family: var(--font); font-size: 11px; font-weight: 600;
-  border-radius: 50%; cursor: pointer;
-  backdrop-filter: blur(20px); transition: all 0.3s;
+  padding: 6px 14px; border-radius: 50px; cursor: pointer;
+  letter-spacing: 1px; transition: all 0.3s;
 }
-.lang-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.lang-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Panel Toggle */
 #panelToggle{
@@ -434,7 +432,7 @@ canvas{display:block;position:fixed;top:0;left:0;}
       hint: 'Move mouse for gravity  ·  Click for supernova  ·  Right-click to repel  ·  Space for burst',
       toastSupernova: '[ Supernova! ]',
       toast4k: '[ 4K Exported ]',
-      langLabel: 'ZH'
+      langLabel: '中'
     },
     zh: {
       pageTitle: '粒子银河 — 橙色烟花',

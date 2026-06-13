@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -56,7 +56,8 @@ nav{
   border-bottom:1px solid var(--border);
 }
 nav .logo{
-  font-size:13px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--text);
+  font-size:13px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#fff;
+  background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:var(--radius);backdrop-filter:blur(10px);
 }
 nav .logo span{color:var(--accent);}
 nav .links{display:flex;gap:2px;align-items:center;}
@@ -81,8 +82,8 @@ nav .links .tool-btn.accent{background:var(--accent);color:#000;font-weight:600;
 nav .links .tool-btn.accent:hover{background:#ff6a1a;color:#000;}
 nav .links .tool-btn.danger:hover{color:#e04040;}
 nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.15);}
-.lang-toggle{position:fixed;top:28px;right:28px;z-index:101;background:rgba(17,17,17,0.95);border:1px solid var(--border);color:var(--text-muted);width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-family:var(--font);font-size:11px;font-weight:600;border-radius:50%;cursor:pointer;backdrop-filter:blur(20px);transition:all 0.3s;}
-.lang-toggle:hover{color:var(--accent);border-color:var(--accent);}
+.lang-toggle{background:none;border:1px solid #2a2a2a;color:#909090;font-family:var(--font);font-size:11px;font-weight:600;padding:6px 14px;border-radius:50px;cursor:pointer;letter-spacing:1px;transition:all 0.3s;margin-left:8px;}
+.lang-toggle:hover{border-color:var(--accent);color:var(--accent);}
 
 #sidePanel{
   position:fixed;right:0;top:50%;transform:translateY(-50%);
@@ -165,8 +166,6 @@ nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.1
 <div id="cursor"></div>
 
 <div id="intro-block"></div>
-<button class="lang-toggle" id="langToggle" title="EN | 中">中</button>
-
 <nav>
   <div class="logo">Light<span>Graffiti</span></div>
   <div class="links">
@@ -181,6 +180,7 @@ nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.1
     <button class="tool-btn" id="undoBtn">Undo</button>
     <button class="tool-btn danger" id="clearBtn">Clear</button>
     <button class="tool-btn accent" id="exportPng">Export</button>
+      <button class="lang-toggle" id="langToggle" title="EN | 中">中</button>
   </div>
 </nav>
 
@@ -304,12 +304,12 @@ nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.1
     var count, spread, speed, lifeMult;
 
     switch(brush){
-      case 'neon':  count=12; spread=params.size*0.3; speed=0.2; lifeMult=3.0; break;
-      case 'fire':  count=18; spread=params.size*0.9; speed=3.0; lifeMult=0.5; break;
-      case 'meteor':count=5;  spread=params.size*0.15;speed=6.0; lifeMult=0.3; break;
-      case 'rainbow':count=8; spread=params.size*0.7; speed=0.6; lifeMult=1.5; break;
-      case 'electric':count=3; spread=params.size*0.25;speed=8.0; lifeMult=0.25;break;
-      case 'spray': count=25; spread=params.size*1.5; speed=0.8; lifeMult=0.7; break;
+      case 'neon':  count=14; spread=params.size*0.25; speed=0.15; lifeMult=1.2; break;
+      case 'fire':  count=12; spread=params.size*0.7; speed=2.0; lifeMult=0.35; break;
+      case 'meteor':count=4;  spread=params.size*0.12;speed=4.0; lifeMult=0.2; break;
+      case 'rainbow':count=6; spread=params.size*0.5; speed=0.4; lifeMult=0.8; break;
+      case 'electric':count=2; spread=params.size*0.2;speed=5.0; lifeMult=0.15;break;
+      case 'spray': count=16; spread=params.size*1.0; speed=0.5; lifeMult=0.4; break;
       default: count=4; spread=params.size*0.5; speed=1.0; lifeMult=1.0;
     }
 
@@ -457,7 +457,7 @@ nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.1
   }
 
   function animate(){
-    var fadeAlpha=0.005+params.trail*0.08;
+    var fadeAlpha=0.012+params.trail*0.08;
     octx.fillStyle='rgba(0,0,0,'+fadeAlpha+')';
     octx.fillRect(0,0,W,H);
     renderTrails();
@@ -486,7 +486,7 @@ nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.1
   });
   overlayCanvas.addEventListener('mousemove',function(e){
     var pos=getPos(e);
-    if(drawing)drawLine(prevX,prevY,pos.x,pos.y);
+    if(drawing){if(brush==='neon'){addTrailPoint(pos.x,pos.y);}else{drawLine(prevX,prevY,pos.x,pos.y);}}
     prevX=pos.x;prevY=pos.y;
     cursorEl.style.left=e.clientX+'px';cursorEl.style.top=e.clientY+'px';
   });
@@ -498,7 +498,7 @@ nav .links .tool-btn.sym-active{color:var(--accent);background:rgba(255,85,0,0.1
   },{passive:false});
   overlayCanvas.addEventListener('touchmove',function(e){
     e.preventDefault();var pos=getPos(e);
-    if(drawing)drawLine(prevX,prevY,pos.x,pos.y);
+    if(drawing){if(brush==='neon'){addTrailPoint(pos.x,pos.y);}else{drawLine(prevX,prevY,pos.x,pos.y);}}
     prevX=pos.x;prevY=pos.y;
   },{passive:false});
   overlayCanvas.addEventListener('touchend',function(){drawing=false;});

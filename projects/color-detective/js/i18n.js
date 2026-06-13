@@ -12,7 +12,7 @@
       brandName2: 'DETECTIVE',
       navExtract: 'Extract',
       navReUpload: 'Re-upload',
-      langToggle: '中文',
+      langToggle: '中',
       heroEyebrow: 'Real-Time Color Extraction Engine',
       heroTitleLine1: 'Extract',
       heroTitleAccent: 'Colors',

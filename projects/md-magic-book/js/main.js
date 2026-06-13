@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    Main — Entry with all features
    ═══════════════════════════════════════════════════════════ */
 
@@ -222,7 +222,7 @@ blockquote { border-left: 3px solid #ff5500; padding-left: 1em; color: #888; bac
 
     setTimeout(() => {
       presView.classList.remove('visible', 'page-exit')
-      mainView.style.display = 'flex'
+      mainView.style.display = ''
       mainView.classList.remove('entered')
       mainView.classList.add('entering')
       requestAnimationFrame(() => {

@@ -86,4 +86,16 @@ class Exporter {
   static allHexes(colors) {
     return colors.map(c => c.hex.toLowerCase()).join(', ')
   }
+
+  /**
+   * 导出为 JSON
+   */
+  static toJSON(colors) {
+    if (!colors || colors.length === 0) return '[]'
+    return JSON.stringify(colors.map(c => ({
+      hex: c.hex.toLowerCase(),
+      rgb: 'rgb(' + c.color.r + ', ' + c.color.g + ', ' + c.color.b + ')',
+      ratio: (c.ratio * 100).toFixed(1) + '%'
+    })), null, 2)
+  }
 }
